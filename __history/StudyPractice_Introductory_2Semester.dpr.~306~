@@ -1,0 +1,2937 @@
+program StudyPractice_Introductory_2Semester;
+
+{$APPTYPE CONSOLE}
+{$R *.res}
+
+uses
+  System.SysUtils, Windows;
+
+type
+  DoctorPointer = ^TDoctor;
+  TicketPointer = ^TTicket;
+  TMinute = 0 .. 59;
+  THour = 0 .. 23;
+
+  TypeTime = record
+    Minute: TMinute;
+    Hour: THour;
+  end;
+
+  TWorkDay = record
+    STime: TypeTime;
+    ETime: TypeTime;
+  end;
+
+  TWorkWeek = record
+    Mon: TWorkDay;
+    Tue: TWorkDay;
+    Wed: TWorkDay;
+    Thr: TWorkDay;
+    Fri: TWorkDay;
+    Sat: TWorkDay;
+  end;
+
+  TDoctorInf = record
+    ID: Integer;
+    Surname: string[30];
+    FName: string[30];
+    MName: string[30];
+    Specialization: string[30];
+    Shledule: TWorkWeek;
+  end;
+
+  TDoctor = record
+    Data: TDoctorInf;
+    Next: DoctorPointer;
+  end;
+
+  TPatient = record
+    Surname: string;
+    FName: string;
+    MName: string;
+  end;
+
+  TTicketInfo = record
+    DoctorID: Integer;
+    CabinetNum: Integer;
+    QueueNum: Integer;
+    Date: TDate;
+    Time: TypeTime;
+    Patient: TPatient;
+  end;
+
+  TTicket = record
+    Inf: TTicketInfo;
+    Next: TicketPointer;
+  end;
+
+  TDoctorFile = file of TDoctorInf;
+
+  TTicketsFile = TextFile;
+
+var
+  FDPT: DoctorPointer;
+  FTPT: TicketPointer;
+  ST, ET: TypeTime;
+  GlobID: Integer;
+  FDoctor: TDoctorFile;
+  FTicket: TTicketsFile;
+  TicketsCount: Integer;
+  ReadFlag: Boolean;
+
+procedure Clear; forward;
+procedure MenuOptionsOutput; forward;
+procedure SetShledule(Pt: DoctorPointer); forward;
+
+procedure Clear;
+var
+  cursor: COORD;
+  r: cardinal;
+begin
+  r := 300;
+  cursor.X := 0;
+  cursor.Y := 0;
+  FillConsoleOutputCharacter(GetStdHandle(STD_OUTPUT_HANDLE), ' ', 80 * r,
+    cursor, r);
+  SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), cursor);
+end;
+
+procedure ReadFromFile(First: DoctorPointer; TFirst: TicketPointer);
+var
+  Inp, TimeStr, FIO, IDStr, CabinetStr, QueueStr, DateStr, TempStr, HourStr,
+    MinuteStr, FStr, IStr, OStr: string;
+  RFlag, TempFlag: Boolean;
+  Counter, j: Integer;
+begin
+  Counter := 1;
+  RFlag := false;
+  Write('Введите название вашей больницы: ');
+  Readln(Inp);
+  Inp := AnsiLowerCase(Inp);
+  if not FileExists(Inp + '.dat') then
+  begin
+    Writeln('Такого файла не существует!');
+    Writeln('Возвращение в контекстное меню!');
+    Readln;
+    Clear;
+    MenuOptionsOutput;
+  end
+  else
+  begin
+    AssignFile(FDoctor, Inp + '.dat');
+    Reset(FDoctor);
+    while not EoF(FDoctor) do
+    begin
+      if not RFlag then
+      begin
+        New(First);
+        FDPT := First;
+        Read(FDoctor, First.Data);
+        RFlag := True;
+      end
+      else
+      begin
+        New(First^.Next);
+        Read(FDoctor, First^.Next^.Data);
+        First := First^.Next;
+      end;
+    end;
+  end;
+  RFlag := false;
+  CloseFile(FDoctor);
+  while FileExists(Inp + '_Ticket_№' + IntToStr(Counter) + '.txt') do
+  begin
+    AssignFile(FTicket, Inp + '_Ticket_№' + IntToStr(Counter) + '.txt');
+    Reset(FTicket);
+    if not RFlag then
+    begin
+      j := 1;
+      FStr := '';
+      IStr := '';
+      OStr := '';
+      TempFlag := false;
+      HourStr := '';
+      MinuteStr := '';
+      FIO := '';
+      IDStr := '';
+      CabinetStr := '';
+      QueueStr := '';
+      DateStr := '';
+      TimeStr := '';
+      New(TFirst);
+      FTPT := TFirst;
+      Readln(FTicket);
+      Readln(FTicket, TempStr);
+      for var i := 13 to TempStr.Length do
+      begin
+        IDStr := IDStr + TempStr[i];
+      end;
+      TFirst.Inf.DoctorID := StrToInt(IDStr);
+      Readln(FTicket, TempStr);
+      for var i := 17 to TempStr.Length do
+      begin
+        CabinetStr := CabinetStr + TempStr[i];
+      end;
+      TFirst.Inf.CabinetNum := StrToInt(CabinetStr);
+      Readln(FTicket, TempStr);
+      for var i := 18 to TempStr.Length do
+      begin
+        QueueStr := QueueStr + TempStr[i];
+      end;
+      TFirst.Inf.QueueNum := StrToInt(QueueStr);
+      Readln(FTicket, TempStr);
+      for var i := 7 to TempStr.Length do
+      begin
+        DateStr := DateStr + TempStr[i];
+      end;
+      TFirst.Inf.Date := StrToDate(DateStr);
+      Readln(FTicket, TempStr);
+      for var i := 8 to TempStr.Length do
+      begin
+        TimeStr := TimeStr + TempStr[i];
+      end;
+      for var i := 1 to TimeStr.Length do
+      begin
+        if TimeStr[i] = ':' then
+        begin
+          TempFlag := True;
+        end
+        else
+        begin
+          if TempFlag then
+          begin
+            MinuteStr := MinuteStr + TimeStr[i];
+          end
+          else
+          begin
+            HourStr := HourStr + TimeStr[i];
+          end;
+        end;
+      end;
+      TFirst.Inf.Time.Hour := StrToInt(HourStr);
+      TFirst.Inf.Time.Minute := StrToInt(MinuteStr);
+      Readln(FTicket, TempStr);
+      for var i := 10 to TempStr.Length do
+      begin
+        FIO := FIO + TempStr[i];
+      end;
+      while FIO[j] <> ' ' do
+      begin
+        FStr := FStr + FIO[j];
+        inc(j);
+      end;
+      inc(j);
+      while FIO[j] <> ' ' do
+      begin
+        IStr := IStr + FIO[j];
+        inc(j);
+      end;
+      inc(j);
+      for var i := j to FIO.Length do
+        OStr := OStr + FIO[i];
+      TFirst.Inf.Patient.Surname := FStr;
+      TFirst.Inf.Patient.FName := IStr;
+      TFirst.Inf.Patient.MName := OStr;
+      RFlag := True;
+    end
+    else
+    begin
+      j := 1;
+      FStr := '';
+      IStr := '';
+      OStr := '';
+      TempFlag := false;
+      HourStr := '';
+      MinuteStr := '';
+      FIO := '';
+      IDStr := '';
+      CabinetStr := '';
+      QueueStr := '';
+      DateStr := '';
+      TimeStr := '';
+      New(TFirst^.Next);
+      TFirst := TFirst^.Next;
+      Readln(FTicket);
+      Readln(FTicket, TempStr);
+      for var i := 13 to TempStr.Length do
+      begin
+        IDStr := IDStr + TempStr[i];
+      end;
+      TFirst.Inf.DoctorID := StrToInt(IDStr);
+      Readln(FTicket, TempStr);
+      for var i := 17 to TempStr.Length do
+      begin
+        CabinetStr := CabinetStr + TempStr[i];
+      end;
+      TFirst.Inf.CabinetNum := StrToInt(CabinetStr);
+      Readln(FTicket, TempStr);
+      for var i := 18 to TempStr.Length do
+      begin
+        QueueStr := QueueStr + TempStr[i];
+      end;
+      TFirst.Inf.QueueNum := StrToInt(QueueStr);
+      Readln(FTicket, TempStr);
+      for var i := 7 to TempStr.Length do
+      begin
+        DateStr := DateStr + TempStr[i];
+      end;
+      TFirst.Inf.Date := StrToDate(DateStr);
+      Readln(FTicket, TempStr);
+      for var i := 8 to TempStr.Length do
+      begin
+        TimeStr := TimeStr + TempStr[i];
+      end;
+      for var i := 1 to TimeStr.Length do
+      begin
+        if TimeStr[i] = ':' then
+        begin
+          TempFlag := True;
+        end
+        else
+        begin
+          if TempFlag then
+          begin
+            MinuteStr := MinuteStr + TimeStr[i];
+          end
+          else
+          begin
+            HourStr := HourStr + TimeStr[i];
+          end;
+        end;
+      end;
+      TFirst.Inf.Time.Hour := StrToInt(HourStr);
+      TFirst.Inf.Time.Minute := StrToInt(MinuteStr);
+      Readln(FTicket, TempStr);
+      for var i := 10 to TempStr.Length do
+      begin
+        FIO := FIO + TempStr[i];
+      end;
+      while FIO[j] <> ' ' do
+      begin
+        FStr := FStr + FIO[j];
+        inc(j);
+      end;
+      inc(j);
+      while FIO[j] <> ' ' do
+      begin
+        IStr := IStr + FIO[j];
+        inc(j);
+      end;
+      inc(j);
+      for var i := j to FIO.Length do
+        OStr := OStr + FIO[i];
+      TFirst.Inf.Patient.Surname := FStr;
+      TFirst.Inf.Patient.FName := IStr;
+      TFirst.Inf.Patient.MName := OStr;
+    end;
+    inc(Counter);
+    CloseFile(FTicket);
+  end;
+  TFirst^.Next := nil;
+  ReadFlag := True;
+  Writeln('Данные успешно считаны из файла!');
+  Readln;
+  Clear;
+  MenuOptionsOutput;
+end;
+
+procedure ExitProgWithSaving(First: DoctorPointer; TFirst: TicketPointer);
+var
+  Inp: string;
+  Counter: Integer;
+begin
+  Counter := 0;
+  Writeln('Вы уверены, что хотите выйти из программы? [Y/N]');
+  Readln(Inp);
+  Inp := AnsiUpperCase(Inp);
+  if Inp = 'Y' then
+  begin
+    Write('Введите название вашей больницы: ');
+    Readln(Inp);
+    Inp := AnsiLowerCase(Inp);
+    AssignFile(FDoctor, Inp + '.dat');
+    Rewrite(FDoctor);
+    while First <> nil do
+    begin
+      Write(FDoctor, First.Data);
+      First := First^.Next;
+    end;
+    CloseFile(FDoctor);
+    while TFirst <> nil do
+    begin
+      inc(Counter);
+      AssignFile(FTicket, Inp + '_Ticket_№' + IntToStr(Counter) + '.txt');
+      Rewrite(FTicket);
+      Writeln(FTicket,
+        '------------------------------------------------------------');
+      Writeln(FTicket, 'ID Доктора: ' + IntToStr(TFirst.Inf.DoctorID));
+      Writeln(FTicket, 'Номер кабинета: ' + IntToStr(TFirst.Inf.CabinetNum));
+      Writeln(FTicket, 'Номер в очереди: ' + IntToStr(TFirst.Inf.QueueNum));
+      Writeln(FTicket, 'Дата: ' + DateToStr(TFirst.Inf.Date));
+      Writeln(FTicket, 'Время: ' + IntToStr(TFirst.Inf.Time.Hour) + ':' +
+        IntToStr(TFirst.Inf.Time.Minute));
+      Writeln(FTicket, 'Пациент: ' + TFirst.Inf.Patient.Surname + ' ' +
+        TFirst.Inf.Patient.FName + ' ' + TFirst.Inf.Patient.MName);
+      Writeln(FTicket,
+        '------------------------------------------------------------');
+      CloseFile(FTicket);
+      TFirst := TFirst^.Next;
+    end;
+    for var i := Counter + 1 to TicketsCount do
+    begin
+      AssignFile(FTicket, Inp + '_Ticket_№' + IntToStr(i) + '.txt');
+      Erase(FTicket);
+      CloseFile(FTicket);
+    end;
+    Writeln('Информация успешно сохранена!');
+    Readln;
+  end
+  else
+  begin
+    if Inp = 'N' then
+    begin
+      Writeln('Возвращение в главное меню!');
+      Readln;
+      Clear;
+      MenuOptionsOutput;
+    end
+    else
+    begin
+      while (Inp <> 'N') and (Inp <> 'Y') do
+      begin
+        Writeln('Некорректные данные. Введите корректные данные!');
+        Writeln('Вы уверены, что хотите выйти из программы? [Y/N]');
+        Readln(Inp);
+        Inp := AnsiUpperCase(Inp);
+      end;
+      if Inp = 'Y' then
+      begin
+        Write('Введите название вашей больницы: ');
+        Readln(Inp);
+        Inp := AnsiLowerCase(Inp);
+        AssignFile(FDoctor, Inp + '.dat');
+        Rewrite(FDoctor);
+        while First <> nil do
+        begin
+          Write(FDoctor, First.Data);
+          First := First^.Next;
+        end;
+        CloseFile(FDoctor);
+        while TFirst <> nil do
+        begin
+          inc(Counter);
+          AssignFile(FTicket, Inp + '_Ticket_№' + IntToStr(Counter) + '.txt');
+          Rewrite(FTicket);
+          Writeln(FTicket,
+            '------------------------------------------------------------');
+          Writeln(FTicket, 'ID Доктора: ' + IntToStr(TFirst.Inf.DoctorID));
+          Writeln(FTicket, 'Номер кабинета: ' +
+            IntToStr(TFirst.Inf.CabinetNum));
+          Writeln(FTicket, 'Номер в очереди: ' + IntToStr(TFirst.Inf.QueueNum));
+          Writeln(FTicket, 'Дата: ' + DateToStr(TFirst.Inf.Date));
+          Writeln(FTicket, 'Время: ' + IntToStr(TFirst.Inf.Time.Hour) + ':' +
+            IntToStr(TFirst.Inf.Time.Minute));
+          Writeln(FTicket, 'Пациент: ' + TFirst.Inf.Patient.Surname + ' ' +
+            TFirst.Inf.Patient.FName + ' ' + TFirst.Inf.Patient.MName);
+          Writeln(FTicket,
+            '------------------------------------------------------------');
+          CloseFile(FTicket);
+          TFirst := TFirst^.Next;
+        end;
+        for var i := Counter + 1 to TicketsCount do
+        begin
+          AssignFile(FTicket, Inp + '_Ticket_№' + IntToStr(i) + '.txt');
+          Erase(FTicket);
+          CloseFile(FTicket);
+        end;
+        Writeln('Информация успешно сохранена!');
+        Readln;
+      end
+      else
+      begin
+        Writeln('Возвращение в главное меню!');
+        Readln;
+        Clear;
+        MenuOptionsOutput;
+      end;
+    end;
+  end;
+end;
+
+procedure ExitProgWithoutSaving;
+var
+  Inp: string;
+begin
+  Writeln('Вы уверены, что хотите выйти из программы? [Y/N]');
+  Readln(Inp);
+  Inp := AnsiUpperCase(Inp);
+  if Inp = 'Y' then
+  begin
+    // Сохранение в файл и выход
+  end
+  else
+  begin
+    if Inp = 'N' then
+    begin
+      Writeln('Возвращение в главное меню!');
+      Readln;
+      Clear;
+      MenuOptionsOutput;
+    end
+    else
+    begin
+      while (Inp <> 'N') and (Inp <> 'Y') do
+      begin
+        Writeln('Некорректные данные. Введите корректные данные!');
+        Writeln('Вы уверены, что хотите выйти из программы? [Y/N]');
+        Readln(Inp);
+        Inp := AnsiUpperCase(Inp);
+      end;
+      if Inp = 'Y' then
+      begin
+        // Сохранение в файл и выход
+      end
+      else
+      begin
+        Writeln('Возвращение в главное меню!');
+        Readln;
+        Clear;
+        MenuOptionsOutput;
+      end;
+    end;
+  end;
+
+end;
+
+procedure Delete(First: DoctorPointer); // overload;
+var
+  F, i, O: string;
+  flag: Boolean;
+  DFirst, TempPT: TicketPointer;
+  ID: Integer;
+begin
+  DFirst := FTPT;
+  flag := false;
+  if First = nil then
+  begin
+    Writeln('Список пуст!');
+  end
+  else
+  begin
+    Writeln('Введите ФИО удаляемого врача');
+    Write('Введите фамилию врача: ');
+    Readln(F);
+    Write('Введите имя врача: ');
+    Readln(i);
+    Write('Введите отчество врача: ');
+    Readln(O);
+    if (AnsiUpperCase(First^.Data.Surname) = AnsiUpperCase(F)) and
+      (AnsiUpperCase(First^.Data.FName) = AnsiUpperCase(i)) and
+      (AnsiUpperCase(First^.Data.MName) = AnsiUpperCase(O)) then
+    begin
+      ID := First^.Data.ID;
+      FDPT := First^.Next;
+      Writeln('Врач удалён из списка');
+      while DFirst^.Next <> nil do
+      begin
+        if DFirst^.Next^.Inf.DoctorID = ID then
+        begin
+          DFirst^.Next := DFirst^.Next^.Next;
+        end
+        else
+        begin
+          DFirst := DFirst^.Next;
+        end;
+      end;
+      if DFirst^.Inf.DoctorID = ID then
+        DFirst := nil;
+      if FTPT^.Inf.DoctorID = ID then
+        FTPT := FTPT^.Next;
+    end
+    else
+    begin
+      while First^.Next <> nil do
+      begin
+        if (AnsiUpperCase(First^.Next^.Data.Surname) = AnsiUpperCase(F)) and
+          (AnsiUpperCase(First^.Next^.Data.FName) = AnsiUpperCase(i)) and
+          (AnsiUpperCase(First^.Next^.Data.MName) = AnsiUpperCase(O)) then
+        begin
+          ID := First^.Next^.Data.ID;
+          First^.Next := First^.Next^.Next;
+          flag := True;
+          Writeln('Врач удалён из списка');
+        end
+        else
+          First := First^.Next;
+      end;
+      if flag then
+      begin
+        while DFirst^.Next <> nil do
+        begin
+          if DFirst^.Inf.DoctorID = ID then
+          begin
+            DFirst^.Next := DFirst^.Next^.Next;
+          end
+          else
+            DFirst := DFirst^.Next;
+        end;
+        if DFirst^.Inf.DoctorID = ID then
+          DFirst := nil;
+        if FTPT.Inf.DoctorID = ID then
+          FTPT := FTPT^.Next;
+      end
+      else
+      begin
+        Writeln('Искомого врача нет в базе данных');
+      end;
+    end;
+  end;
+  Readln;
+  Clear;
+  MenuOptionsOutput;
+end;
+
+procedure Poisk(First: TicketPointer; SN, FN, MN: string); overload;
+var
+  i: Integer;
+  flag: Boolean;
+begin
+  flag := false;
+  i := 1;
+  if First = nil then
+  begin
+    Writeln('Список пуст!');
+  end
+  else
+  begin
+    while First <> nil do
+    begin
+      if (AnsiUpperCase(First^.Inf.Patient.Surname) = AnsiUpperCase(SN)) and
+        (AnsiUpperCase(First^.Inf.Patient.FName) = AnsiUpperCase(FN)) and
+        (AnsiUpperCase(First^.Inf.Patient.MName) = AnsiUpperCase(MN)) then
+      begin
+        Writeln(i, '.');
+        Writeln('ID врача: ', First.Inf.DoctorID);
+        Writeln('Номер кабинета: ', First.Inf.CabinetNum);
+        Writeln('Номер в очереди: ', First.Inf.QueueNum);
+        Writeln('Дата: ', DateToStr(First.Inf.Date), ' Время: ',
+          First.Inf.Time.Hour, ':', First.Inf.Time.Minute);
+        Writeln('ФИО Пациента: ', First.Inf.Patient.Surname, ' ',
+          First.Inf.Patient.FName, ' ', First.Inf.Patient.MName);
+        inc(i);
+        flag := True;
+      end;
+      First := First^.Next;
+    end;
+    if not flag then
+      Writeln('Такого пациента нет в базе записей!');
+  end;
+  Readln;
+  Clear;
+  MenuOptionsOutput;
+end;
+
+procedure Poisk(FirstD: DoctorPointer; First: TicketPointer;
+  Spec: string); overload;
+var
+  TempPT: TicketPointer;
+  i: Integer;
+  flag, flagRec: Boolean;
+begin
+  TempPT := First;
+  i := 1;
+  flag := false;
+  flagRec := false;
+  if FirstD = nil then
+  begin
+    Writeln('Список пуст!');
+  end
+  else
+  begin
+    while FirstD <> nil do
+    begin
+      if (AnsiUpperCase(FirstD.Data.Specialization) = AnsiUpperCase(Spec)) then
+      begin
+        flag := True;
+        Writeln(i, '.');
+        Writeln('ФИО Врача: ', FirstD.Data.Surname, ' ', FirstD.Data.FName, ' ',
+          FirstD.Data.MName);
+        Writeln('ID Врача: ', FirstD.Data.ID);
+        Writeln('Специализация: ', FirstD.Data.Specialization);
+        Writeln('Начало работы в понедельник: ',
+          FirstD.Data.Shledule.Mon.STime.Hour, ':',
+          FirstD.Data.Shledule.Mon.STime.Minute,
+          ' Конец работы в понедельник: ', FirstD.Data.Shledule.Mon.ETime.Hour,
+          ':', FirstD.Data.Shledule.Mon.ETime.Minute);
+        Writeln('Начало работы во вторник: ',
+          FirstD.Data.Shledule.Tue.STime.Hour, ':',
+          FirstD.Data.Shledule.Tue.STime.Minute, ' Конец работы во вторник: ',
+          FirstD.Data.Shledule.Tue.ETime.Hour, ':',
+          FirstD.Data.Shledule.Tue.ETime.Minute);
+        Writeln('Начало работы в среду: ', FirstD.Data.Shledule.Wed.STime.Hour,
+          ':', FirstD.Data.Shledule.Wed.STime.Minute, ' Конец работы в среду: ',
+          FirstD.Data.Shledule.Wed.ETime.Hour, ':',
+          FirstD.Data.Shledule.Wed.ETime.Minute);
+        Writeln('Начало работы в четверг: ',
+          FirstD.Data.Shledule.Thr.STime.Hour, ':',
+          FirstD.Data.Shledule.Thr.STime.Minute, ' Конец работы в четверг: ',
+          FirstD.Data.Shledule.Thr.ETime.Hour, ':',
+          FirstD.Data.Shledule.Thr.ETime.Minute);
+        Writeln('Начало работы в пятницу: ',
+          FirstD.Data.Shledule.Fri.STime.Hour, ':',
+          FirstD.Data.Shledule.Fri.STime.Minute, ' Конец работы в пятницу: ',
+          FirstD.Data.Shledule.Fri.ETime.Hour, ':',
+          FirstD.Data.Shledule.Fri.ETime.Minute);
+        Writeln('Начало работы в субботу: ',
+          FirstD.Data.Shledule.Sat.STime.Hour, ':',
+          FirstD.Data.Shledule.Sat.STime.Minute, ' Конец работы в субботу: ',
+          FirstD.Data.Shledule.Sat.ETime.Hour, ':',
+          FirstD.Data.Shledule.Sat.ETime.Minute);
+        inc(i);
+        Writeln;
+        Writeln;
+        First := TempPT;
+        while First <> nil do
+        begin
+          if (First.Inf.DoctorID = FirstD.Data.ID) and
+            (First.Inf.Patient.Surname <> '') and
+            (First.Inf.Patient.FName <> '') and (First.Inf.Patient.MName <> '')
+          then
+          begin
+            flagRec := True;
+            Writeln('ID врача: ', First.Inf.DoctorID);
+            Writeln('Номер кабинета: ', First.Inf.CabinetNum);
+            Writeln('Номер в очереди: ', First.Inf.QueueNum);
+            Writeln('Дата: ', DateTimeTOStr(First.Inf.Date), ' Время: ',
+              First.Inf.Time.Hour, ':', First.Inf.Time.Minute);
+            Writeln('ФИО Пациента: ', First.Inf.Patient.Surname, ' ',
+              First.Inf.Patient.FName, ' ', First.Inf.Patient.MName);
+            Writeln;
+            Writeln;
+          end;
+          First := First^.Next;
+        end;
+        if not flagRec then
+        begin
+          Writeln('У врача нет записей!');
+          Writeln;
+        end;
+      end;
+      FirstD := FirstD^.Next;
+    end;
+    if not flag then
+    begin
+      Writeln('Врачей с такой специализацией нет в базе!');
+    end;
+  end;
+  Readln;
+  Clear;
+  MenuOptionsOutput;
+end;
+
+procedure Correct(First: DoctorPointer); overload;
+var
+  Inp, Cnt: Integer;
+  F, i, O, TInpt, temp, MStr, Spec: string;
+  flag, TimeFlag, FindFlag: Boolean;
+  TempPT: DoctorPointer;
+  Arr: Array of DoctorPointer;
+begin
+  flag := false;
+  FindFlag := false;
+  temp := '';
+  MStr := '';
+  Cnt := 1;
+  if First = nil then
+  begin
+    Writeln('Список пуст!');
+  end
+  else
+  begin
+    TimeFlag := false;
+    Write('Введите специализацию врача: ');
+    Readln(Spec);
+    TempPT := First;
+    while TempPT <> nil do
+    begin
+      if AnsiUpperCase(TempPT.Data.Specialization) = AnsiUpperCase(Spec) then
+      begin
+        FindFlag := True;
+        SetLength(Arr, Cnt);
+        Arr[Cnt - 1] := TempPT;
+        Writeln(Cnt, '.');
+        Writeln('ФИО Врача: ', First.Data.Surname, ' ', First.Data.FName, ' ',
+          First.Data.MName);
+        Writeln('ID Врача: ', First.Data.ID);
+        Writeln('Специализация: ', First.Data.Specialization);
+        Writeln('Начало работы в понедельник: ',
+          First.Data.Shledule.Mon.STime.Hour, ':',
+          First.Data.Shledule.Mon.STime.Minute, ' Конец работы в понедельник: ',
+          First.Data.Shledule.Mon.ETime.Hour, ':',
+          First.Data.Shledule.Mon.ETime.Minute);
+        Writeln('Начало работы во вторник: ',
+          First.Data.Shledule.Tue.STime.Hour, ':',
+          First.Data.Shledule.Tue.STime.Minute, ' Конец работы во вторник: ',
+          First.Data.Shledule.Tue.ETime.Hour, ':',
+          First.Data.Shledule.Tue.ETime.Minute);
+        Writeln('Начало работы в среду: ', First.Data.Shledule.Wed.STime.Hour,
+          ':', First.Data.Shledule.Wed.STime.Minute, ' Конец работы в среду: ',
+          First.Data.Shledule.Wed.ETime.Hour, ':',
+          First.Data.Shledule.Wed.ETime.Minute);
+        Writeln('Начало работы в четверг: ', First.Data.Shledule.Thr.STime.Hour,
+          ':', First.Data.Shledule.Thr.STime.Minute,
+          ' Конец работы в четверг: ', First.Data.Shledule.Thr.ETime.Hour, ':',
+          First.Data.Shledule.Thr.ETime.Minute);
+        Writeln('Начало работы в пятницу: ', First.Data.Shledule.Fri.STime.Hour,
+          ':', First.Data.Shledule.Fri.STime.Minute,
+          ' Конец работы в пятницу: ', First.Data.Shledule.Fri.ETime.Hour, ':',
+          First.Data.Shledule.Fri.ETime.Minute);
+        Writeln('Начало работы в субботу: ', First.Data.Shledule.Sat.STime.Hour,
+          ':', First.Data.Shledule.Sat.STime.Minute,
+          ' Конец работы в субботу: ', First.Data.Shledule.Sat.ETime.Hour, ':',
+          First.Data.Shledule.Sat.ETime.Minute);
+        inc(Cnt);
+        Writeln;
+        Writeln;
+      end;
+      TempPT := TempPT^.Next;
+    end;
+    if FindFlag then
+    begin
+      Write('Выберите номер врача, запись которого хотите отредактировать: ');
+      while flag = false do
+      begin
+        try
+          Readln(Inp);
+          flag := True;
+        except
+          Writeln('Некорректный ввод!');
+        end;
+      end;
+      flag := false;
+      while (Inp < 1) or (Inp > Length(Arr)) do
+      begin
+        Writeln('Вы ввели некорректное значение!');
+        Write('Выберите номер врача, запись которого хотите отредактировать: ');
+        while flag = false do
+        begin
+          try
+            Readln(Inp);
+            flag := True;
+          except
+            Writeln('Некорректный ввод!');
+          end;
+        end;
+        flag := false;
+      end;
+      First := Arr[Inp - 1];
+      Writeln('Введите номер параметра, который хотите редактировать');
+      Writeln('1. Фамилию');
+      Writeln('2. Имя');
+      Writeln('3. Отчество');
+      Writeln('4. Специализацию');
+      Writeln('5. График');
+      while flag = false do
+      begin
+        try
+          Readln(Inp);
+          flag := True;
+        except
+          Writeln('Некорректный ввод!');
+        end;
+      end;
+      flag := false;
+      case Inp of
+        1:
+          begin
+            Writeln('Введите новое значение параметра');
+            Readln(First.Data.Surname);
+            Writeln('Параметр откорректирован');
+          end;
+        2:
+          begin
+            Writeln('Введите новое значение параметра');
+            Readln(First.Data.FName);
+            Writeln('Параметр откорректирован');
+          end;
+        3:
+          begin
+            Writeln('Введите новое значение параметра');
+            Readln(First.Data.MName);
+            Writeln('Параметр откорректирован');
+          end;
+        4:
+          begin
+            Writeln('Введите новое значение параметра');
+            Readln(First.Data.Specialization);
+            Writeln('Параметр откорректирован');
+          end;
+        5:
+          begin
+            SetShledule(First);
+          end;
+      else
+        begin
+          Writeln('Вы ввели некорректное значение!');
+          Writeln('Введите номер параметра, который хотите редактировать');
+          while flag = false do
+          begin
+            try
+              Readln(input);
+              flag := True;
+            except
+              Writeln('Некорректный ввод!');
+            end;
+          end;
+          flag := false;
+        end;
+      end;
+    end
+    else
+    begin
+      Writeln('Врачей с такой специализацией нет в базе нет в базе!');
+    end;
+  end;
+  Readln;
+  Clear;
+  MenuOptionsOutput;
+end;
+
+procedure Correct(First: TicketPointer); overload;
+begin
+
+end;
+
+procedure View(First: DoctorPointer); overload;
+var
+  i: Integer;
+begin
+  if First = nil then
+  begin
+    Writeln('Список пуст!');
+  end
+  else
+  begin
+    i := 1;
+    while First <> nil do
+    begin
+      Writeln(i, '.');
+      Writeln('ФИО Врача: ', First.Data.Surname, ' ', First.Data.FName, ' ',
+        First.Data.MName);
+      Writeln('ID Врача: ', First.Data.ID);
+      Writeln('Специализация: ', First.Data.Specialization);
+      Writeln('Начало работы в понедельник: ',
+        First.Data.Shledule.Mon.STime.Hour, ':',
+        First.Data.Shledule.Mon.STime.Minute, ' Конец работы в понедельник: ',
+        First.Data.Shledule.Mon.ETime.Hour, ':',
+        First.Data.Shledule.Mon.ETime.Minute);
+      Writeln('Начало работы во вторник: ', First.Data.Shledule.Tue.STime.Hour,
+        ':', First.Data.Shledule.Tue.STime.Minute, ' Конец работы во вторник: ',
+        First.Data.Shledule.Tue.ETime.Hour, ':',
+        First.Data.Shledule.Tue.ETime.Minute);
+      Writeln('Начало работы в среду: ', First.Data.Shledule.Wed.STime.Hour,
+        ':', First.Data.Shledule.Wed.STime.Minute, ' Конец работы в среду: ',
+        First.Data.Shledule.Wed.ETime.Hour, ':',
+        First.Data.Shledule.Wed.ETime.Minute);
+      Writeln('Начало работы в четверг: ', First.Data.Shledule.Thr.STime.Hour,
+        ':', First.Data.Shledule.Thr.STime.Minute, ' Конец работы в четверг: ',
+        First.Data.Shledule.Thr.ETime.Hour, ':',
+        First.Data.Shledule.Thr.ETime.Minute);
+      Writeln('Начало работы в пятницу: ', First.Data.Shledule.Fri.STime.Hour,
+        ':', First.Data.Shledule.Fri.STime.Minute, ' Конец работы в пятницу: ',
+        First.Data.Shledule.Fri.ETime.Hour, ':',
+        First.Data.Shledule.Fri.ETime.Minute);
+      Writeln('Начало работы в субботу: ', First.Data.Shledule.Sat.STime.Hour,
+        ':', First.Data.Shledule.Sat.STime.Minute, ' Конец работы в субботу: ',
+        First.Data.Shledule.Sat.ETime.Hour, ':',
+        First.Data.Shledule.Sat.ETime.Minute);
+      inc(i);
+      Writeln;
+      Writeln;
+      First := First^.Next;
+    end;
+  end;
+  Readln;
+  Clear;
+  MenuOptionsOutput;
+end;
+
+procedure View(First: TicketPointer); overload;
+var
+  i: Integer;
+begin
+  if First = nil then
+  begin
+    Writeln('Список пуст!');
+  end
+  else
+  begin
+    i := 1;
+    while First <> nil do
+    begin
+      Writeln(i, '.');
+      Writeln('ID врача: ', First.Inf.DoctorID);
+      Writeln('Номер кабинета: ', First.Inf.CabinetNum);
+      Writeln('Номер в очереди: ', First.Inf.QueueNum);
+      Writeln('Дата: ', DateTimeTOStr(First.Inf.Date), ' Время: ',
+        First.Inf.Time.Hour, ':', First.Inf.Time.Minute);
+      if (First.Inf.Patient.Surname <> '') and (First.Inf.Patient.FName <> '')
+        and (First.Inf.Patient.MName <> '') then
+        Writeln('ФИО Пациента: ', First.Inf.Patient.Surname, ' ',
+          First.Inf.Patient.FName, ' ', First.Inf.Patient.MName)
+      else
+        Writeln('Талон не занят');
+      Writeln;
+      Writeln;
+      inc(i);
+      First := First^.Next;
+    end;
+  end;
+  Readln;
+  Clear;
+  MenuOptionsOutput;
+end;
+
+procedure TrashCan;
+begin
+  // TShledule = record
+  // case Day: TDay of
+  // Mon:
+  // (MonSTime: TTime; MonETime: TTime);
+  // Tue:
+  // (TueSTime: TTime; TueETime: TTime);
+  // Wed:
+  // (WedSTime: TTime; WedETime: TTime);
+  // Thr:
+  // (ThrSTime: TTime; ThrETime: TTime);
+  // Fri:
+  // (FriSTime: TTime; FriETime: TTime);
+  // Sat:
+  // (SatSTime: TTime; SatETime: TTime);
+  // end;
+  // temp := '';
+  // MStr := '';
+  // InpFlag := false;
+  // TimeFlag := false;
+  // flag := false;
+  // writeln('Введите ФИО нового врача');
+  // Write('Введите фамилию врача: ');
+  // readln(F);
+  // Write('Введите имя врача: ');
+  // readln(i);
+  // Write('Введите отчество врача: ');
+  // readln(O);
+  // if First = nil then
+  // begin
+  // New(FDPT);
+  // First := FDPT;
+  // First^.Surname := F;
+  // First^.FName := i;
+  // First^.MName := O;
+  // First^.ID := 1;
+  // Write('Введите специализацию нового врача: ');
+  // readln(spec);
+  // First^.Specialization := spec;
+  // while InpFlag = false do
+  // begin
+  // try
+  // Write('Введите время начала работы(В формате часы:минуты): ');
+  // readln(TInpt);
+  // for var a := 1 to TInpt.Length do
+  // begin
+  // if (TInpt[a] = ':') then
+  // begin
+  // TimeFlag := true;
+  // end
+  // else
+  // begin
+  // if not TimeFlag then
+  // begin
+  // temp := temp + TInpt[a];
+  // end
+  // else
+  // begin
+  // MStr := MStr + TInpt[a];
+  // end;
+  // end;
+  // end;
+  // ST.Hour := StrToInt(temp);
+  // ST.Minute := StrToInt(MStr);
+  // InpFlag := true;
+  // except
+  // writeln('Некорректный ввод!');
+  // temp := '';
+  // MStr := '';
+  // end;
+  // end;
+  // if TimeFlag then
+  // begin
+  //
+  // InpFlag := false;
+  // TimeFlag := false;
+  // temp := '';
+  // MStr := '';
+  // Write('Введите время конца работы(В формате часы:минуты): ');
+  // readln(TInpt);
+  // for var k := 1 to TInpt.Length do
+  // begin
+  // if (TInpt[k] = ':') then
+  // begin
+  // TimeFlag := true;
+  // end
+  // else
+  // begin
+  // if not TimeFlag then
+  // begin
+  // temp := temp + TInpt[k];
+  // end
+  // else
+  // begin
+  // MStr := MStr + TInpt[k];
+  // end;
+  // end;
+  // end;
+  // if TimeFlag then
+  // begin
+  // while InpFlag = false do
+  // begin
+  // try
+  // Write('Введите время конца работы(В формате часы:минуты): ');
+  // temp := '';
+  // MStr := '';
+  // readln(TInpt);
+  // for var k := 1 to TInpt.Length do
+  // begin
+  // if (TInpt[k] = ':') then
+  // begin
+  // TimeFlag := true;
+  // end
+  // else
+  // begin
+  // if not TimeFlag then
+  // begin
+  // temp := temp + TInpt[k];
+  // end
+  // else
+  // begin
+  // MStr := MStr + TInpt[k];
+  // end;
+  // end;
+  // end;
+  // ET.Hour := StrToInt(temp);
+  // ET.Minute := StrToInt(MStr);
+  // InpFlag := true;
+  // except
+  // writeln('Некорректный ввод!');
+  // end;
+  // end;
+  // InpFlag := false;
+  // if (ET.Hour * 60 + ET.Minute) > (ST.Hour * 60 + ST.Minute) then
+  // begin
+  // First^.Shledule.Mon.STime.Minute := ST.Minute;
+  // First^.Shledule.Mon.STime.Hour := ST.Hour;
+  // First^.Shledule.Mon.ETime.Minute := ET.Minute;
+  // First^.Shledule.Mon.ETime.Hour := ET.Hour;
+  // First^.Shledule.Tue.STime.Minute := ST.Minute;
+  // First^.Shledule.Tue.STime.Hour := ST.Hour;
+  // First^.Shledule.Tue.ETime.Minute := ET.Minute;
+  // First^.Shledule.Tue.ETime.Hour := ET.Hour;
+  // First^.Shledule.Wed.STime.Minute := ST.Minute;
+  // First^.Shledule.Wed.STime.Hour := ST.Hour;
+  // First^.Shledule.Wed.ETime.Minute := ET.Minute;
+  // First^.Shledule.Wed.ETime.Hour := ET.Hour;
+  // First^.Shledule.Thr.STime.Minute := ST.Minute;
+  // First^.Shledule.Thr.STime.Hour := ST.Hour;
+  // First^.Shledule.Thr.ETime.Minute := ET.Minute;
+  // First^.Shledule.Thr.ETime.Hour := ET.Hour;
+  // First^.Shledule.Fri.STime.Minute := ST.Minute;
+  // First^.Shledule.Fri.STime.Hour := ST.Hour;
+  // First^.Shledule.Fri.ETime.Minute := ET.Minute;
+  // First^.Shledule.Fri.ETime.Hour := ET.Hour;
+  // First^.Shledule.Sat.STime.Minute := ST.Minute;
+  // First^.Shledule.Sat.STime.Hour := ST.Hour;
+  // First^.Shledule.Sat.ETime.Minute := ET.Minute;
+  // First^.Shledule.Sat.ETime.Hour := ET.Hour;
+  // writeln('Запись добавлена!');
+  // end
+  // else
+  // begin
+  // writeln('Неверно введено время!');
+  // writeln('Автоматически выставлено время с 8 утра до 8 вечера!');
+  // First^.Shledule.Mon.STime.Minute := 0;
+  // First^.Shledule.Mon.STime.Hour := 8;
+  // First^.Shledule.Mon.ETime.Minute := 0;
+  // First^.Shledule.Mon.ETime.Hour := 20;
+  // First^.Shledule.Tue.STime.Minute := 0;
+  // First^.Shledule.Tue.STime.Hour := 8;
+  // First^.Shledule.Tue.ETime.Minute := 0;
+  // First^.Shledule.Tue.ETime.Hour := 20;
+  // First^.Shledule.Wed.STime.Minute := 0;
+  // First^.Shledule.Wed.STime.Hour := 8;
+  // First^.Shledule.Wed.ETime.Minute := 0;
+  // First^.Shledule.Wed.ETime.Hour := 20;
+  // First^.Shledule.Thr.STime.Minute := 0;
+  // First^.Shledule.Thr.STime.Hour := 8;
+  // First^.Shledule.Thr.ETime.Minute := 0;
+  // First^.Shledule.Thr.ETime.Hour := 20;
+  // First^.Shledule.Fri.STime.Minute := 0;
+  // First^.Shledule.Fri.STime.Hour := 8;
+  // First^.Shledule.Fri.ETime.Minute := 0;
+  // First^.Shledule.Fri.ETime.Hour := 20;
+  // First^.Shledule.Sat.STime.Minute := 0;
+  // First^.Shledule.Sat.STime.Hour := 8;
+  // First^.Shledule.Sat.ETime.Minute := 0;
+  // First^.Shledule.Sat.ETime.Hour := 20;
+  // end;
+  // end
+  // else
+  // begin
+  // writeln('Неверно введено время!');
+  // writeln('Автоматически выставлено время с 8 утра до 8 вечера!');
+  // First^.Shledule.Mon.STime.Minute := 0;
+  // First^.Shledule.Mon.STime.Hour := 8;
+  // First^.Shledule.Mon.ETime.Minute := 0;
+  // First^.Shledule.Mon.ETime.Hour := 20;
+  // First^.Shledule.Tue.STime.Minute := 0;
+  // First^.Shledule.Tue.STime.Hour := 8;
+  // First^.Shledule.Tue.ETime.Minute := 0;
+  // First^.Shledule.Tue.ETime.Hour := 20;
+  // First^.Shledule.Wed.STime.Minute := 0;
+  // First^.Shledule.Wed.STime.Hour := 8;
+  // First^.Shledule.Wed.ETime.Minute := 0;
+  // First^.Shledule.Wed.ETime.Hour := 20;
+  // First^.Shledule.Thr.STime.Minute := 0;
+  // First^.Shledule.Thr.STime.Hour := 8;
+  // First^.Shledule.Thr.ETime.Minute := 0;
+  // First^.Shledule.Thr.ETime.Hour := 20;
+  // First^.Shledule.Fri.STime.Minute := 0;
+  // First^.Shledule.Fri.STime.Hour := 8;
+  // First^.Shledule.Fri.ETime.Minute := 0;
+  // First^.Shledule.Fri.ETime.Hour := 20;
+  // First^.Shledule.Sat.STime.Minute := 0;
+  // First^.Shledule.Sat.STime.Hour := 8;
+  // First^.Shledule.Sat.ETime.Minute := 0;
+  // First^.Shledule.Sat.ETime.Hour := 20;
+  // end;
+  // end
+  // else
+  // begin
+  // writeln('Неверно введено время!');
+  // writeln('Автоматически выставлено время с 8 утра до 8 вечера!');
+  // First^.Shledule.Mon.STime.Minute := 0;
+  // First^.Shledule.Mon.STime.Hour := 8;
+  // First^.Shledule.Mon.ETime.Minute := 0;
+  // First^.Shledule.Mon.ETime.Hour := 20;
+  // First^.Shledule.Tue.STime.Minute := 0;
+  // First^.Shledule.Tue.STime.Hour := 8;
+  // First^.Shledule.Tue.ETime.Minute := 0;
+  // First^.Shledule.Tue.ETime.Hour := 20;
+  // First^.Shledule.Wed.STime.Minute := 0;
+  // First^.Shledule.Wed.STime.Hour := 8;
+  // First^.Shledule.Wed.ETime.Minute := 0;
+  // First^.Shledule.Wed.ETime.Hour := 20;
+  // First^.Shledule.Thr.STime.Minute := 0;
+  // First^.Shledule.Thr.STime.Hour := 8;
+  // First^.Shledule.Thr.ETime.Minute := 0;
+  // First^.Shledule.Thr.ETime.Hour := 20;
+  // First^.Shledule.Fri.STime.Minute := 0;
+  // First^.Shledule.Fri.STime.Hour := 8;
+  // First^.Shledule.Fri.ETime.Minute := 0;
+  // First^.Shledule.Fri.ETime.Hour := 20;
+  // First^.Shledule.Sat.STime.Minute := 0;
+  // First^.Shledule.Sat.STime.Hour := 8;
+  // First^.Shledule.Sat.ETime.Minute := 0;
+  // First^.Shledule.Sat.ETime.Hour := 20;
+  // end;
+  // end
+  // else
+  // begin
+  // while First^.Next <> nil do
+  // begin
+  // if (AnsiUpperCase(F) = AnsiUpperCase(First^.Surname)) and
+  // (AnsiUpperCase(i) = AnsiUpperCase(First^.FName)) and
+  // (AnsiUpperCase(O) = AnsiUpperCase(First^.MName)) then
+  // begin
+  // flag := true;
+  // end;
+  // First := First^.Next;
+  // end;
+  // if not flag then
+  // begin
+  // New(First^.Next);
+  // First^.Next^.ID := First^.ID + 1;
+  // First := First^.Next;
+  // First^.FName := i;
+  // First^.Surname := F;
+  // First^.MName := O;
+  // Write('Введите специализацию нового врача: ');
+  // readln(spec);
+  // First^.Specialization := spec;
+  // Write('Введите время начала работы(В формате часы:минуты): ');
+  // readln(TInpt);
+  // for var k := 1 to TInpt.Length do
+  // begin
+  // if (TInpt[k] = ':') then
+  // begin
+  // TimeFlag := true;
+  // end
+  // else
+  // begin
+  // if not TimeFlag then
+  // begin
+  // temp := temp + TInpt[k];
+  // end
+  // else
+  // begin
+  // MStr := MStr + TInpt[k];
+  // end;
+  // end;
+  // end;
+  // if TimeFlag then
+  // begin
+  // TimeFlag := false;
+  // while InpFlag = false do
+  // begin
+  // try
+  // ST.Hour := StrToInt(temp);
+  // ST.Minute := StrToInt(MStr);
+  // InpFlag := true;
+  // except
+  // writeln('Некорректный ввод!');
+  // Write('Введите время начала работы(В формате часы:минуты): ');
+  // temp := '';
+  // MStr := '';
+  // readln(TInpt);
+  // for var k := 1 to TInpt.Length do
+  // begin
+  // if (TInpt[k] = ':') then
+  // begin
+  // TimeFlag := true;
+  // end
+  // else
+  // begin
+  // if not TimeFlag then
+  // begin
+  // temp := temp + TInpt[k];
+  // end
+  // else
+  // begin
+  // MStr := MStr + TInpt[k];
+  // end;
+  // end;
+  // end;
+  // end;
+  // end;
+  // InpFlag := false;
+  // temp := '';
+  // MStr := '';
+  // Write('Введите время конца работы(В формате часы:минуты): ');
+  // readln(TInpt);
+  // for var k := 1 to TInpt.Length do
+  // begin
+  // if (TInpt[k] = ':') then
+  // begin
+  // TimeFlag := true;
+  // end
+  // else
+  // begin
+  // if not TimeFlag then
+  // begin
+  // temp := temp + TInpt[k];
+  // end
+  // else
+  // begin
+  // MStr := MStr + TInpt[k];
+  // end;
+  // end;
+  // end;
+  // if TimeFlag then
+  // begin
+  // while InpFlag = false do
+  // begin
+  // try
+  // ET.Hour := StrToInt(temp);
+  // ET.Minute := StrToInt(MStr);
+  // InpFlag := true;
+  // except
+  // writeln('Некорректный ввод!');
+  // Write('Введите время конца работы(В формате часы:минуты): ');
+  // temp := '';
+  // MStr := '';
+  // readln(TInpt);
+  // for var k := 1 to TInpt.Length do
+  // begin
+  // if (TInpt[k] = ':') then
+  // begin
+  // TimeFlag := true;
+  // end
+  // else
+  // begin
+  // if not TimeFlag then
+  // begin
+  // temp := temp + TInpt[k];
+  // end
+  // else
+  // begin
+  // MStr := MStr + TInpt[k];
+  // end;
+  // end;
+  // end;
+  // end;
+  // end;
+  // InpFlag := false;
+  // InpFlag := false;
+  // if (ET.Hour * 60 + ET.Minute) > (ST.Hour * 60 + ST.Minute) then
+  // begin
+  // First^.Shledule.Mon.STime.Minute := ST.Minute;
+  // First^.Shledule.Mon.STime.Hour := ST.Hour;
+  // First^.Shledule.Mon.ETime.Minute := ET.Minute;
+  // First^.Shledule.Mon.ETime.Hour := ET.Hour;
+  // First^.Shledule.Tue.STime.Minute := ST.Minute;
+  // First^.Shledule.Tue.STime.Hour := ST.Hour;
+  // First^.Shledule.Tue.ETime.Minute := ET.Minute;
+  // First^.Shledule.Tue.ETime.Hour := ET.Hour;
+  // First^.Shledule.Wed.STime.Minute := ST.Minute;
+  // First^.Shledule.Wed.STime.Hour := ST.Hour;
+  // First^.Shledule.Wed.ETime.Minute := ET.Minute;
+  // First^.Shledule.Wed.ETime.Hour := ET.Hour;
+  // First^.Shledule.Thr.STime.Minute := ST.Minute;
+  // First^.Shledule.Thr.STime.Hour := ST.Hour;
+  // First^.Shledule.Thr.ETime.Minute := ET.Minute;
+  // First^.Shledule.Thr.ETime.Hour := ET.Hour;
+  // First^.Shledule.Fri.STime.Minute := ST.Minute;
+  // First^.Shledule.Fri.STime.Hour := ST.Hour;
+  // First^.Shledule.Fri.ETime.Minute := ET.Minute;
+  // First^.Shledule.Fri.ETime.Hour := ET.Hour;
+  // First^.Shledule.Sat.STime.Minute := ST.Minute;
+  // First^.Shledule.Sat.STime.Hour := ST.Hour;
+  // First^.Shledule.Sat.ETime.Minute := ET.Minute;
+  // First^.Shledule.Sat.ETime.Hour := ET.Hour;
+  // writeln('Запись добавлена!');
+  // end
+  // else
+  // begin
+  // writeln('Неверно введено время!');
+  // writeln('Автоматически выставлено время с 8 утра до 8 вечера!');
+  // First^.Shledule.Mon.STime.Minute := 0;
+  // First^.Shledule.Mon.STime.Hour := 8;
+  // First^.Shledule.Mon.ETime.Minute := 0;
+  // First^.Shledule.Mon.ETime.Hour := 20;
+  // First^.Shledule.Tue.STime.Minute := 0;
+  // First^.Shledule.Tue.STime.Hour := 8;
+  // First^.Shledule.Tue.ETime.Minute := 0;
+  // First^.Shledule.Tue.ETime.Hour := 20;
+  // First^.Shledule.Wed.STime.Minute := 0;
+  // First^.Shledule.Wed.STime.Hour := 8;
+  // First^.Shledule.Wed.ETime.Minute := 0;
+  // First^.Shledule.Wed.ETime.Hour := 20;
+  // First^.Shledule.Thr.STime.Minute := 0;
+  // First^.Shledule.Thr.STime.Hour := 8;
+  // First^.Shledule.Thr.ETime.Minute := 0;
+  // First^.Shledule.Thr.ETime.Hour := 20;
+  // First^.Shledule.Fri.STime.Minute := 0;
+  // First^.Shledule.Fri.STime.Hour := 8;
+  // First^.Shledule.Fri.ETime.Minute := 0;
+  // First^.Shledule.Fri.ETime.Hour := 20;
+  // First^.Shledule.Sat.STime.Minute := 0;
+  // First^.Shledule.Sat.STime.Hour := 8;
+  // First^.Shledule.Sat.ETime.Minute := 0;
+  // First^.Shledule.Sat.ETime.Hour := 20;
+  // end;
+  // end
+  // else
+  // begin
+  // writeln('Неверно введено время!');
+  // writeln('Автоматически выставлено время с 8 утра до 8 вечера!');
+  // First^.Shledule.Mon.STime.Minute := 0;
+  // First^.Shledule.Mon.STime.Hour := 8;
+  // First^.Shledule.Mon.ETime.Minute := 0;
+  // First^.Shledule.Mon.ETime.Hour := 20;
+  // First^.Shledule.Tue.STime.Minute := 0;
+  // First^.Shledule.Tue.STime.Hour := 8;
+  // First^.Shledule.Tue.ETime.Minute := 0;
+  // First^.Shledule.Tue.ETime.Hour := 20;
+  // First^.Shledule.Wed.STime.Minute := 0;
+  // First^.Shledule.Wed.STime.Hour := 8;
+  // First^.Shledule.Wed.ETime.Minute := 0;
+  // First^.Shledule.Wed.ETime.Hour := 20;
+  // First^.Shledule.Thr.STime.Minute := 0;
+  // First^.Shledule.Thr.STime.Hour := 8;
+  // First^.Shledule.Thr.ETime.Minute := 0;
+  // First^.Shledule.Thr.ETime.Hour := 20;
+  // First^.Shledule.Fri.STime.Minute := 0;
+  // First^.Shledule.Fri.STime.Hour := 8;
+  // First^.Shledule.Fri.ETime.Minute := 0;
+  // First^.Shledule.Fri.ETime.Hour := 20;
+  // First^.Shledule.Sat.STime.Minute := 0;
+  // First^.Shledule.Sat.STime.Hour := 8;
+  // First^.Shledule.Sat.ETime.Minute := 0;
+  // First^.Shledule.Sat.ETime.Hour := 20;
+  // end;
+  // end
+  // else
+  // begin
+  // writeln('Неверно введено время!');
+  // writeln('Автоматически выставлено время с 8 утра до 8 вечера!');
+  // First^.Shledule.Mon.STime.Minute := 0;
+  // First^.Shledule.Mon.STime.Hour := 8;
+  // First^.Shledule.Mon.ETime.Minute := 0;
+  // First^.Shledule.Mon.ETime.Hour := 20;
+  // First^.Shledule.Tue.STime.Minute := 0;
+  // First^.Shledule.Tue.STime.Hour := 8;
+  // First^.Shledule.Tue.ETime.Minute := 0;
+  // First^.Shledule.Tue.ETime.Hour := 20;
+  // First^.Shledule.Wed.STime.Minute := 0;
+  // First^.Shledule.Wed.STime.Hour := 8;
+  // First^.Shledule.Wed.ETime.Minute := 0;
+  // First^.Shledule.Wed.ETime.Hour := 20;
+  // First^.Shledule.Thr.STime.Minute := 0;
+  // First^.Shledule.Thr.STime.Hour := 8;
+  // First^.Shledule.Thr.ETime.Minute := 0;
+  // First^.Shledule.Thr.ETime.Hour := 20;
+  // First^.Shledule.Fri.STime.Minute := 0;
+  // First^.Shledule.Fri.STime.Hour := 8;
+  // First^.Shledule.Fri.ETime.Minute := 0;
+  // First^.Shledule.Fri.ETime.Hour := 20;
+  // First^.Shledule.Sat.STime.Minute := 0;
+  // First^.Shledule.Sat.STime.Hour := 8;
+  // First^.Shledule.Sat.ETime.Minute := 0;
+  // First^.Shledule.Sat.ETime.Hour := 20;
+  // end;
+  // end
+  // else
+  // begin
+  // writeln('Такой врач уже существует');
+  // end;
+  // end;
+end;
+
+procedure SetShledule(Pt: DoctorPointer);
+var
+  SMinutes, EMinutes: 0 .. 59;
+  SHours, EHours: 0 .. 23;
+  Inp: string;
+  flag: Boolean;
+begin
+  flag := false;
+  for var i := 1 to 6 do
+  begin
+    SMinutes := 1;
+    SHours := 1;
+    EMinutes := 0;
+    EHours := 0;
+    while SMinutes + SHours * 60 >= EMinutes + EHours * 60 do
+    begin
+      while flag = false do
+      begin
+        try
+          Write('Введите начало времени работы  в ', i,
+            '-й день недели (Часы): ');
+          Readln(Inp);
+          SHours := StrToInt(Inp);
+          flag := True;
+        except
+          Writeln('Некорректный ввод!');
+        end;
+      end;
+      flag := false;
+      while flag = false do
+      begin
+        try
+          Write('Введите начало времени работы  в ', i,
+            '-й день недели (Минуты): ');
+          Readln(Inp);
+          SMinutes := StrToInt(Inp);
+          flag := True;
+        except
+          Writeln('Некорректный ввод!');
+        end;
+      end;
+      flag := false;
+      while flag = false do
+      begin
+        try
+          Write('Введите конец времени работы  в ', i,
+            '-й день недели (Часы): ');
+          Readln(Inp);
+          EHours := StrToInt(Inp);
+          flag := True;
+        except
+          Writeln('Некорректный ввод!');
+        end;
+      end;
+      flag := false;
+      while flag = false do
+      begin
+        try
+          Write('Введите конец времени работы  в ', i,
+            '-й день недели (Минуты): ');
+          Readln(Inp);
+          EMinutes := StrToInt(Inp);
+          flag := True;
+        except
+          Writeln('Некорректный ввод!');
+        end;
+      end;
+      flag := false;
+      if SMinutes + SHours * 60 >= EMinutes + EHours * 60 then
+        Writeln('Некорректный ввод!')
+    end;
+    case i of
+      1:
+        begin
+          Pt.Data.Shledule.Mon.STime.Hour := SHours;
+          Pt.Data.Shledule.Mon.STime.Minute := SMinutes;
+          Pt.Data.Shledule.Mon.ETime.Hour := EHours;
+          Pt.Data.Shledule.Mon.ETime.Minute := EMinutes;
+        end;
+      2:
+        begin
+          Pt.Data.Shledule.Tue.STime.Hour := SHours;
+          Pt.Data.Shledule.Tue.STime.Minute := SMinutes;
+          Pt.Data.Shledule.Tue.ETime.Hour := EHours;
+          Pt.Data.Shledule.Tue.ETime.Minute := EMinutes;
+        end;
+      3:
+        begin
+          Pt.Data.Shledule.Wed.STime.Hour := SHours;
+          Pt.Data.Shledule.Wed.STime.Minute := SMinutes;
+          Pt.Data.Shledule.Wed.ETime.Hour := EHours;
+          Pt.Data.Shledule.Wed.ETime.Minute := EMinutes;
+        end;
+      4:
+        begin
+          Pt.Data.Shledule.Thr.STime.Hour := SHours;
+          Pt.Data.Shledule.Thr.STime.Minute := SMinutes;
+          Pt.Data.Shledule.Thr.ETime.Hour := EHours;
+          Pt.Data.Shledule.Thr.ETime.Minute := EMinutes;
+        end;
+      5:
+        begin
+          Pt.Data.Shledule.Fri.STime.Hour := SHours;
+          Pt.Data.Shledule.Fri.STime.Minute := SMinutes;
+          Pt.Data.Shledule.Fri.ETime.Hour := EHours;
+          Pt.Data.Shledule.Fri.ETime.Minute := EMinutes;
+        end;
+      6:
+        begin
+          Pt.Data.Shledule.Sat.STime.Hour := SHours;
+          Pt.Data.Shledule.Sat.STime.Minute := SMinutes;
+          Pt.Data.Shledule.Sat.ETime.Hour := EHours;
+          Pt.Data.Shledule.Sat.ETime.Minute := EMinutes;
+        end;
+    end;
+  end;
+end;
+
+procedure Add(First: DoctorPointer); overload;
+var
+  F, i, O, Spec, temp, TInpt, MStr: string;
+  flag, FirstFlag: Boolean;
+  Pt: DoctorPointer;
+begin
+  FirstFlag := false;
+  Write('Введите фамилию нового врача: ');
+  Readln(F);
+  Write('Введите имя нового врача: ');
+  Readln(i);
+  Write('Введите отчество нового врача: ');
+  Readln(O);
+  Write('Введите специализацию нового врача: ');
+  Readln(Spec);
+  if First = nil then
+    FirstFlag := True
+  else
+    while First^.Next <> nil do
+    begin
+      if (First.Data.Surname = F) and (First.Data.FName = i) and
+        (First.Data.MName = O) and (First.Data.Specialization = Spec) then
+      begin
+        Writeln('Такой врач уже существует!');
+        Readln;
+        Clear;
+        MenuOptionsOutput;
+      end
+      else
+      begin
+        First := First^.Next;
+      end;
+    end;
+  if FirstFlag then
+  begin
+    New(FDPT);
+    First := FDPT;
+  end
+  else
+  begin
+    New(First^.Next);
+    First := First^.Next;
+  end;
+  First.Data.ID := GlobID + 1;
+  inc(GlobID);
+  First.Data.Surname := F;
+  First.Data.FName := i;
+  First.Data.MName := O;
+  First.Data.Specialization := Spec;
+  SetShledule(First);
+  Writeln('Врач успешно добавлен в базу!');
+  First^.Next := nil;
+  Readln;
+  Clear;
+  MenuOptionsOutput;
+end;
+
+procedure Add(First: TicketPointer; FirstD: DoctorPointer); overload;
+var
+  Inp, Spec, F, i, O: string;
+  Num, Cnt, Inpt, TempID: Integer;
+  TempPT: TicketPointer;
+  TempDPT: DoctorPointer;
+  flag, inpflag: Boolean;
+  FreeTickets: array of TicketPointer;
+  Arr: Array of DoctorPointer;
+begin
+  Cnt := 1;
+  flag := false;
+  inpflag := false;
+  if First = nil then
+  begin
+    Writeln('Талоны не сгенирированы! ');
+    Readln;
+    Clear;
+    MenuOptionsOutput;
+  end
+  else
+  begin
+    Write('Введите желаемую специализацию:');
+    Readln(Spec);
+    while FirstD <> nil do
+    begin
+      if (AnsiUpperCase(FirstD.Data.Specialization) = AnsiUpperCase(Spec)) then
+      begin
+        SetLength(Arr, Cnt);
+        Arr[Cnt - 1] := FirstD;
+        Writeln(Cnt, '.');
+        Writeln('ФИО Врача: ', FirstD.Data.Surname, ' ', FirstD.Data.FName, ' ',
+          FirstD.Data.MName);
+        Writeln('ID Врача: ', FirstD.Data.ID);
+        Writeln('Специализация: ', FirstD.Data.Specialization);
+        Writeln('Начало работы в понедельник: ',
+          FirstD.Data.Shledule.Mon.STime.Hour, ':',
+          FirstD.Data.Shledule.Mon.STime.Minute,
+          ' Конец работы в понедельник: ', FirstD.Data.Shledule.Mon.ETime.Hour,
+          ':', FirstD.Data.Shledule.Mon.ETime.Minute);
+        Writeln('Начало работы во вторник: ',
+          FirstD.Data.Shledule.Tue.STime.Hour, ':',
+          FirstD.Data.Shledule.Tue.STime.Minute, ' Конец работы во вторник: ',
+          FirstD.Data.Shledule.Tue.ETime.Hour, ':',
+          FirstD.Data.Shledule.Tue.ETime.Minute);
+        Writeln('Начало работы в среду: ', FirstD.Data.Shledule.Wed.STime.Hour,
+          ':', FirstD.Data.Shledule.Wed.STime.Minute, ' Конец работы в среду: ',
+          FirstD.Data.Shledule.Wed.ETime.Hour, ':',
+          FirstD.Data.Shledule.Wed.ETime.Minute);
+        Writeln('Начало работы в четверг: ',
+          FirstD.Data.Shledule.Thr.STime.Hour, ':',
+          FirstD.Data.Shledule.Thr.STime.Minute, ' Конец работы в четверг: ',
+          FirstD.Data.Shledule.Thr.ETime.Hour, ':',
+          FirstD.Data.Shledule.Thr.ETime.Minute);
+        Writeln('Начало работы в пятницу: ',
+          FirstD.Data.Shledule.Fri.STime.Hour, ':',
+          FirstD.Data.Shledule.Fri.STime.Minute, ' Конец работы в пятницу: ',
+          FirstD.Data.Shledule.Fri.ETime.Hour, ':',
+          FirstD.Data.Shledule.Fri.ETime.Minute);
+        Writeln('Начало работы в субботу: ',
+          FirstD.Data.Shledule.Sat.STime.Hour, ':',
+          FirstD.Data.Shledule.Sat.STime.Minute, ' Конец работы в субботу: ',
+          FirstD.Data.Shledule.Sat.ETime.Hour, ':',
+          FirstD.Data.Shledule.Sat.ETime.Minute);
+        Writeln;
+        Writeln;
+        inc(Cnt);
+      end;
+      FirstD := FirstD^.Next;
+    end;
+    if Length(Arr) > 0 then
+    begin
+      Write('Выберите номер врача, к которому хотите записаться: ');
+      while inpflag = false do
+      begin
+        try
+          Readln(Inpt);
+          TempDPT := Arr[Inpt - 1];
+          TempID := Arr[Inpt - 1].Data.ID;
+          inpflag := True;
+        except
+          Write('Некорректный ввод! Введите корректное значение: ');
+        end;
+      end;
+      inpflag := false;
+      TempPT := First;
+      while TempPT <> nil do
+      begin
+        if (TempPT.Inf.Patient.Surname = '') and (TempPT.Inf.Patient.MName = '')
+          and (TempPT.Inf.Patient.FName = '') and (TempPT.Inf.DoctorID = TempID)
+        then
+        begin
+          flag := True;
+        end;
+        TempPT := TempPT^.Next;
+      end;
+      if flag then
+      begin
+        TempPT := First;
+        Writeln('1 - Понедельник');
+        Writeln('2 - Вторник');
+        Writeln('3 - Среда');
+        Writeln('4 - Четверг');
+        Writeln('5 - Пятница');
+        Writeln('6 - Суббота');
+        Write('Введите номер дня недели на который хотели бы записаться (от 1 до 6): ');
+        Readln(Inp);
+        while (Inp <> '1') and (Inp <> '2') and (Inp <> '3') and (Inp <> '4')
+          and (Inp <> '5') and (Inp <> '6') do
+        begin
+          Write('Неверный ввод! Введите значение корректно: ');
+          Readln(Inp);
+        end;
+        Num := StrToInt(Inp);
+        Writeln;
+        case Num of
+          1:
+            begin
+              Writeln('Начало работы в понедельник: ',
+                TempDPT.Data.Shledule.Mon.STime.Hour, ':',
+                TempDPT.Data.Shledule.Mon.STime.Minute,
+                ' Конец работы в понедельник: ',
+                TempDPT.Data.Shledule.Mon.ETime.Hour, ':',
+                TempDPT.Data.Shledule.Mon.ETime.Minute);
+            end;
+          2:
+            begin
+              Writeln('Начало работы во вторник: ',
+                TempDPT.Data.Shledule.Tue.STime.Hour, ':',
+                TempDPT.Data.Shledule.Tue.STime.Minute,
+                ' Конец работы во вторник: ',
+                TempDPT.Data.Shledule.Tue.ETime.Hour, ':',
+                TempDPT.Data.Shledule.Tue.ETime.Minute);
+            end;
+          3:
+            begin
+              Writeln('Начало работы в среду: ',
+                TempDPT.Data.Shledule.Wed.STime.Hour, ':',
+                TempDPT.Data.Shledule.Wed.STime.Minute,
+                ' Конец работы в среду: ', TempDPT.Data.Shledule.Wed.ETime.Hour,
+                ':', TempDPT.Data.Shledule.Wed.ETime.Minute);
+            end;
+          4:
+            begin
+              Writeln('Начало работы в четверг: ',
+                TempDPT.Data.Shledule.Thr.STime.Hour, ':',
+                TempDPT.Data.Shledule.Thr.STime.Minute,
+                ' Конец работы в четверг: ',
+                TempDPT.Data.Shledule.Thr.ETime.Hour, ':',
+                TempDPT.Data.Shledule.Thr.ETime.Minute);
+            end;
+          5:
+            begin
+              Writeln('Начало работы в пятницу: ',
+                TempDPT.Data.Shledule.Fri.STime.Hour, ':',
+                TempDPT.Data.Shledule.Fri.STime.Minute,
+                ' Конец работы в пятницу: ',
+                TempDPT.Data.Shledule.Fri.ETime.Hour, ':',
+                TempDPT.Data.Shledule.Fri.ETime.Minute);
+            end;
+          6:
+            begin
+              Writeln('Начало работы в субботу: ',
+                TempDPT.Data.Shledule.Sat.STime.Hour, ':',
+                TempDPT.Data.Shledule.Sat.STime.Minute,
+                ' Конец работы в субботу: ',
+                TempDPT.Data.Shledule.Sat.ETime.Hour, ':',
+                TempDPT.Data.Shledule.Sat.ETime.Minute);
+            end;
+        end;
+        Writeln;
+        Writeln('Свободные талоны к врачу на этот день недели: ');
+        Cnt := 1;
+        while TempPT <> nil do
+        begin
+          if (TempPT.Inf.Patient.Surname = '') and
+            (TempPT.Inf.Patient.MName = '') and (TempPT.Inf.Patient.FName = '')
+            and (TempPT.Inf.DoctorID = TempID) and
+            (DayOfWeek(TempPT.Inf.Date) = Num + 1) then
+          begin
+            Write(Cnt, '. ');
+            SetLength(FreeTickets, Cnt);
+            FreeTickets[Cnt - 1] := TempPT;
+            inc(Cnt);
+            Write('Дата: ', DateToStr(TempPT.Inf.Date));
+            Writeln(' Время: ', TempPT.Inf.Time.Hour, ':',
+              TempPT.Inf.Time.Minute);
+            Writeln;
+          end;
+          TempPT := TempPT^.Next;
+        end;
+        Write('Выберите номер талона, который вам подходит(В случае, если ни один не подходит введите 0): ');
+        while inpflag = false do
+        begin
+          try
+            Readln(Inpt);
+            if Inpt = 0 then
+            begin
+              Writeln('Возвращение в контекстное меню!');
+              Readln;
+              Clear;
+              MenuOptionsOutput;
+            end
+            else
+            begin
+              TempPT := FreeTickets[Inpt - 1];
+            end;
+            inpflag := True;
+          except
+            Write('Некорректный ввод! Введите корректное значение: ');
+          end;
+        end;
+        inpflag := false;
+        Writeln('Введите своё ФИО');
+        Write('Введите свою фамилию: ');
+        Readln(F);
+        while Trim(F) = '' do
+        begin
+          Write('Вы не ввели фамилию! Введите фамилию: ');
+          Readln(F);
+        end;
+        Write('Введите своё имя: ');
+        Readln(i);
+        while Trim(i) = '' do
+        begin
+          Write('Вы не ввели имя! Введите имя: ');
+          Readln(i);
+        end;
+        Write('Введите своё отчество: ');
+        Readln(O);
+        while Trim(O) = '' do
+        begin
+          Write('Вы не ввели отчество! Введите отчество: ');
+          Readln(O);
+        end;
+        TempPT.Inf.Patient.Surname := Trim(F);
+        TempPT.Inf.Patient.FName := Trim(i);
+        TempPT.Inf.Patient.MName := Trim(O);
+        Writeln('Вы успешно записались к врачу!');
+      end
+      else
+      begin
+        Writeln('Нет доступных талонов к выбранному врачу!');
+      end;
+    end
+    else
+    begin
+      Writeln('Врачей с такой специализацией нет в базе!');
+      Readln;
+      Clear;
+      MenuOptionsOutput;
+    end;
+    Readln;
+    Clear;
+    MenuOptionsOutput;
+  end;
+end;
+
+procedure Sort(First: TicketPointer); overload;
+var
+  Sorted: TicketPointer;
+begin
+  if (First = nil) or (First^.Next = nil) then
+  begin
+    Writeln('В списке нечего сортировать!');
+    Readln;
+    Clear;
+    MenuOptionsOutput;
+  end
+  else
+  begin
+    // FTPT:=InsertionSortTickets(First);
+    Writeln('Список успешно отсортирован!');
+    Readln;
+    Clear;
+    MenuOptionsOutput;
+  end;
+end;
+
+function InsertionSortDoctors(var Head: DoctorPointer): DoctorPointer;
+var
+  Current, Prev, NextNode, Sorted, temp: DoctorPointer;
+begin
+  Sorted := nil;
+  Current := Head;
+  while Current <> nil do
+  begin
+    NextNode := Current^.Next;
+    if (Sorted = nil) or (AnsiUpperCase(Sorted^.Data.Specialization) >
+      AnsiUpperCase(Current^.Data.Specialization)) then
+    begin
+      Current^.Next := Sorted;
+      Sorted := Current;
+    end
+    else
+    begin
+      Prev := Sorted;
+      while (Prev^.Next <> nil) and
+        (AnsiUpperCase(Prev^.Next^.Data.Specialization) <
+        AnsiUpperCase(Current^.Data.Specialization)) do
+        Prev := Prev^.Next;
+      Current^.Next := Prev^.Next;
+      Prev^.Next := Current;
+    end;
+    Current := NextNode;
+  end;
+  Result := Sorted;
+end;
+
+procedure Sort(First: DoctorPointer); overload;
+var
+  Sorted: DoctorPointer;
+begin
+  if (First = nil) or (First^.Next = nil) then
+  begin
+    Writeln('В списке нечего сортировать!');
+    Readln;
+    Clear;
+    MenuOptionsOutput;
+  end
+  else
+  begin
+    FDPT := InsertionSortDoctors(First);
+    // or
+    // ((AnsiUpperCase(Prev^.Next^.Data.Specialization)
+    // = AnsiUpperCase(Current^.Data.Specialization)) and
+    // (AnsiUpperCase(Prev^.Next^.Data.Surname) <
+    // AnsiUpperCase(Current^.Data.Surname)))
+
+    // or
+    // ((AnsiUpperCase(Sorted^.Data.Specialization)
+    // = AnsiUpperCase(Current^.Data.Specialization)) and
+    // (AnsiUpperCase(Sorted^.Data.Surname) >
+    // AnsiUpperCase(Current^.Data.Surname)))
+    // while First^.Next <> nil do
+    // begin
+    // TempPT := First^.Next;
+    // Min := AnsiUpperCase(First^.Data.Specialization);
+    // MinPt := First;
+    // while TempPT <> nil do
+    // begin
+    // if AnsiUpperCase(TempPT^.Data.Specialization) < Min then
+    // begin
+    // MinPt := TempPT;
+    // Min := AnsiUpperCase(TempPT^.Data.Specialization);
+    // end;
+    // TempPT := TempPT^.Next;
+    // end;
+    // SwapPointers(First, MinPt);
+    // First := First^.Next;
+    // end;
+    Writeln('Список успешно отсортирован!');
+    Readln;
+    Clear;
+    MenuOptionsOutput;
+  end;
+end;
+
+Procedure Generate(First: TicketPointer; FirstD: DoctorPointer);
+var
+  Day, TempID, j, Cnt, Inpt: Integer;
+  Inp, F, i, O, Spec: string;
+  Date: TDateTime;
+  TempTime: TypeTime;
+  TempPT: DoctorPointer;
+  flag, ptflag, inpflag, DateFlag: Boolean;
+  Arr: Array of DoctorPointer;
+begin
+  DateFlag := false;
+  Cnt := 1;
+  inpflag := false;
+  j := 1;
+  flag := false;
+  ptflag := false;
+  Write('Введите желаемую специализацию:');
+  Readln(Spec);
+  while FirstD <> nil do
+  begin
+    if (AnsiUpperCase(FirstD.Data.Specialization) = AnsiUpperCase(Spec)) then
+    begin
+      flag := True;
+      SetLength(Arr, Cnt);
+      Arr[Cnt - 1] := FirstD;
+      Writeln(Cnt, '.');
+      Writeln('ФИО Врача: ', FirstD.Data.Surname, ' ', FirstD.Data.FName, ' ',
+        FirstD.Data.MName);
+      Writeln('ID Врача: ', FirstD.Data.ID);
+      Writeln('Специализация: ', FirstD.Data.Specialization);
+      Writeln('Начало работы в понедельник: ',
+        FirstD.Data.Shledule.Mon.STime.Hour, ':',
+        FirstD.Data.Shledule.Mon.STime.Minute, ' Конец работы в понедельник: ',
+        FirstD.Data.Shledule.Mon.ETime.Hour, ':',
+        FirstD.Data.Shledule.Mon.ETime.Minute);
+      Writeln('Начало работы во вторник: ', FirstD.Data.Shledule.Tue.STime.Hour,
+        ':', FirstD.Data.Shledule.Tue.STime.Minute,
+        ' Конец работы во вторник: ', FirstD.Data.Shledule.Tue.ETime.Hour, ':',
+        FirstD.Data.Shledule.Tue.ETime.Minute);
+      Writeln('Начало работы в среду: ', FirstD.Data.Shledule.Wed.STime.Hour,
+        ':', FirstD.Data.Shledule.Wed.STime.Minute, ' Конец работы в среду: ',
+        FirstD.Data.Shledule.Wed.ETime.Hour, ':',
+        FirstD.Data.Shledule.Wed.ETime.Minute);
+      Writeln('Начало работы в четверг: ', FirstD.Data.Shledule.Thr.STime.Hour,
+        ':', FirstD.Data.Shledule.Thr.STime.Minute, ' Конец работы в четверг: ',
+        FirstD.Data.Shledule.Thr.ETime.Hour, ':',
+        FirstD.Data.Shledule.Thr.ETime.Minute);
+      Writeln('Начало работы в пятницу: ', FirstD.Data.Shledule.Fri.STime.Hour,
+        ':', FirstD.Data.Shledule.Fri.STime.Minute, ' Конец работы в пятницу: ',
+        FirstD.Data.Shledule.Fri.ETime.Hour, ':',
+        FirstD.Data.Shledule.Fri.ETime.Minute);
+      Writeln('Начало работы в субботу: ', FirstD.Data.Shledule.Sat.STime.Hour,
+        ':', FirstD.Data.Shledule.Sat.STime.Minute, ' Конец работы в субботу: ',
+        FirstD.Data.Shledule.Sat.ETime.Hour, ':',
+        FirstD.Data.Shledule.Sat.ETime.Minute);
+      Writeln;
+      Writeln;
+      inc(Cnt);
+    end;
+    FirstD := FirstD^.Next;
+  end;
+  if flag then
+  begin
+    Write('Введите номер желаемого врача для генерации талонов: ');
+    while inpflag = false do
+    begin
+      try
+        Readln(Inpt);
+        TempPT := Arr[Inpt - 1];
+        TempID := Arr[Inpt - 1].Data.ID;
+        inpflag := True;
+      except
+        Writeln('Некорректный ввод! Введите корректное значение!');
+      end;
+    end;
+
+    inpflag := false;
+    while inpflag = false do
+    begin
+      try
+        DateFlag := false;
+        while not DateFlag do
+        begin
+          Write('Введите дату, начиная с которой сгенерируются билеты на неделю (в формате Месяц/День/Год): ');
+          Readln(Inp);
+          Cnt := 0;
+          for var s := 1 to Length(Inp) do
+          begin
+            if Inp[s] = '/' then
+              inc(Cnt);
+          end;
+          if Cnt = 2 then
+            DateFlag := True
+          else
+            Writeln('Вы некорректно ввели дату!');
+        end;
+        Date := StrTodateTime(Inp);
+        inpflag := True;
+      except
+        Writeln('Некорректный ввод! Введите корректно!');
+      end;
+    end;
+    inpflag := false;
+    Day := DayOfWeek(Date);
+    if FTPT = nil then
+    begin
+      j := 1;
+      New(FTPT);
+      First := FTPT;
+      First.Next := nil;
+      case Day of
+        7:
+          begin
+            TempTime := TempPT.Data.Shledule.Sat.STime;
+            Writeln('Талоны на ', Day - 1, '-й день недели сгенерированы');
+            while (TempTime.Hour * 60 + TempTime.Minute) <
+              (TempPT.Data.Shledule.Sat.ETime.Hour * 60 +
+              TempPT.Data.Shledule.Sat.ETime.Minute) do
+            begin
+              if not ptflag then
+              begin
+                ptflag := True;
+              end
+              else
+              begin
+                New(First^.Next);
+                First := First^.Next;
+              end;
+              First.Inf.DoctorID := TempID;
+              First.Inf.CabinetNum := TempID;
+              First.Inf.Date := Date;
+              First.Inf.QueueNum := j;
+              inc(j);
+              First.Inf.Time := TempTime;
+              First.Inf.Patient.Surname := '';
+              First.Inf.Patient.FName := '';
+              First.Inf.Patient.MName := '';
+              TempTime.Hour := TempTime.Hour + (TempTime.Minute + 15) div 60;
+              TempTime.Minute := (TempTime.Minute + 15) mod 60;
+            end;
+            Date := Date + 1;
+            inc(Day);
+          end;
+        6:
+          begin
+            TempTime := TempPT.Data.Shledule.Fri.STime;
+            Writeln('Талоны на ', Day - 1, '-й день недели сгенерированы');
+            while (TempTime.Hour * 60 + TempTime.Minute) <
+              (TempPT.Data.Shledule.Fri.ETime.Hour * 60 +
+              TempPT.Data.Shledule.Fri.ETime.Minute) do
+            begin
+              if not ptflag then
+              begin
+                ptflag := True;
+              end
+              else
+              begin
+                New(First^.Next);
+                First := First^.Next;
+              end;
+              First.Inf.DoctorID := TempID;
+              First.Inf.CabinetNum := TempID;
+              First.Inf.Date := Date;
+              First.Inf.QueueNum := j;
+              inc(j);
+              First.Inf.Time := TempTime;
+              First.Inf.Patient.Surname := '';
+              First.Inf.Patient.FName := '';
+              First.Inf.Patient.MName := '';
+              TempTime.Hour := TempTime.Hour + (TempTime.Minute + 15) div 60;
+              TempTime.Minute := (TempTime.Minute + 15) mod 60;
+            end;
+            Date := Date + 1;
+            inc(Day);
+          end;
+        5:
+          begin
+            TempTime := TempPT.Data.Shledule.Thr.STime;
+            Writeln('Талоны на ', Day - 1, '-й день недели сгенерированы');
+            while (TempTime.Hour * 60 + TempTime.Minute) <
+              (TempPT.Data.Shledule.Thr.ETime.Hour * 60 +
+              TempPT.Data.Shledule.Thr.ETime.Minute) do
+            begin
+              if not ptflag then
+              begin
+                ptflag := True;
+              end
+              else
+              begin
+                New(First^.Next);
+                First := First^.Next;
+              end;
+              First.Inf.DoctorID := TempID;
+              First.Inf.CabinetNum := TempID;
+              First.Inf.Date := Date;
+              First.Inf.QueueNum := j;
+              inc(j);
+              First.Inf.Time := TempTime;
+              First.Inf.Patient.Surname := '';
+              First.Inf.Patient.FName := '';
+              First.Inf.Patient.MName := '';
+              TempTime.Hour := TempTime.Hour + (TempTime.Minute + 15) div 60;
+              TempTime.Minute := (TempTime.Minute + 15) mod 60;
+
+            end;
+            Date := Date + 1;
+            inc(Day);
+          end;
+        4:
+          begin
+            TempTime := TempPT.Data.Shledule.Wed.STime;
+            Writeln('Талоны на ', Day - 1, '-й день недели сгенерированы');
+            while (TempTime.Hour * 60 + TempTime.Minute) <
+              (TempPT.Data.Shledule.Wed.ETime.Hour * 60 +
+              TempPT.Data.Shledule.Wed.ETime.Minute) do
+            begin
+              if not ptflag then
+              begin
+                ptflag := True;
+              end
+              else
+              begin
+                New(First^.Next);
+                First := First^.Next;
+              end;
+              First.Inf.DoctorID := TempID;
+              First.Inf.CabinetNum := TempID;
+              First.Inf.Date := Date;
+              First.Inf.QueueNum := j;
+              inc(j);
+              First.Inf.Time := TempTime;
+              First.Inf.Patient.Surname := '';
+              First.Inf.Patient.FName := '';
+              First.Inf.Patient.MName := '';
+              TempTime.Hour := TempTime.Hour + (TempTime.Minute + 15) div 60;
+              TempTime.Minute := (TempTime.Minute + 15) mod 60;
+
+            end;
+            Date := Date + 1;
+            inc(Day);
+          end;
+        3:
+          begin
+            TempTime := TempPT.Data.Shledule.Tue.STime;
+            Writeln('Талоны на ', Day - 1, '-й день недели сгенерированы');
+            while (TempTime.Hour * 60 + TempTime.Minute) <
+              (TempPT.Data.Shledule.Tue.ETime.Hour * 60 +
+              TempPT.Data.Shledule.Tue.ETime.Minute) do
+            begin
+              if not ptflag then
+              begin
+                ptflag := True;
+              end
+              else
+              begin
+                New(First^.Next);
+                First := First^.Next;
+              end;
+              First.Inf.DoctorID := TempID;
+              First.Inf.CabinetNum := TempID;
+              First.Inf.Date := Date;
+              First.Inf.QueueNum := j;
+              inc(j);
+              First.Inf.Time := TempTime;
+              First.Inf.Patient.Surname := '';
+              First.Inf.Patient.FName := '';
+              First.Inf.Patient.MName := '';
+              TempTime.Hour := TempTime.Hour + (TempTime.Minute + 15) div 60;
+              TempTime.Minute := (TempTime.Minute + 15) mod 60;
+
+            end;
+            Date := Date + 1;
+            inc(Day);
+          end;
+        2:
+          begin
+            TempTime := TempPT.Data.Shledule.Mon.ETime;
+            Writeln('Талоны на ', Day - 1, '-й день недели сгенерированы');
+            while (TempTime.Hour * 60 + TempTime.Minute) <
+              (TempPT.Data.Shledule.Mon.ETime.Hour * 60 +
+              TempPT.Data.Shledule.Mon.ETime.Minute) do
+            begin
+              if not ptflag then
+              begin
+                ptflag := True;
+              end
+              else
+              begin
+                New(First^.Next);
+                First := First^.Next;
+              end;
+              First.Inf.DoctorID := TempID;
+              First.Inf.CabinetNum := TempID;
+              First.Inf.Date := Date;
+              First.Inf.QueueNum := j;
+              inc(j);
+              First.Inf.Time := TempTime;
+              First.Inf.Patient.Surname := '';
+              First.Inf.Patient.FName := '';
+              First.Inf.Patient.MName := '';
+              TempTime.Hour := TempTime.Hour + (TempTime.Minute + 15) div 60;
+              TempTime.Minute := (TempTime.Minute + 15) mod 60;
+
+            end;
+            Date := Date + 1;
+            inc(Day);
+          end;
+        1:
+          begin
+            inc(Day);
+            Date := Date + 1;
+          end;
+
+      end;
+      for var k := 1 to 6 do
+      begin
+        j := 1;
+        case Day of
+          1:
+            begin
+              inc(Day);
+              Date := Date + 1;
+            end;
+          2:
+            begin
+              TempTime := TempPT.Data.Shledule.Mon.STime;
+              Writeln('Талоны на ', Day - 1, '-й день недели сгенерированы');
+              while (TempTime.Hour * 60 + TempTime.Minute) <
+                (TempPT.Data.Shledule.Mon.ETime.Hour * 60 +
+                TempPT.Data.Shledule.Mon.ETime.Minute) do
+              begin
+                New(First^.Next);
+                First := First^.Next;
+                First.Inf.DoctorID := TempID;
+                First.Inf.CabinetNum := TempID;
+                First.Inf.Date := Date;
+                First.Inf.QueueNum := j;
+                inc(j);
+                First.Inf.Time := TempTime;
+                First.Inf.Patient.Surname := '';
+                First.Inf.Patient.FName := '';
+                First.Inf.Patient.MName := '';
+                TempTime.Hour := TempTime.Hour + (TempTime.Minute + 15) div 60;
+                TempTime.Minute := (TempTime.Minute + 15) mod 60;
+              end;
+              inc(Day);
+              Date := Date + 1;
+            end;
+          3:
+            begin
+              TempTime := TempPT.Data.Shledule.Tue.STime;
+              Writeln('Талоны на ', Day - 1, '-й день недели сгенерированы');
+              while (TempTime.Hour * 60 + TempTime.Minute) <
+                (TempPT.Data.Shledule.Tue.ETime.Hour * 60 +
+                TempPT.Data.Shledule.Tue.ETime.Minute) do
+              begin
+                New(First^.Next);
+                First := First^.Next;
+                First.Inf.DoctorID := TempID;
+                First.Inf.CabinetNum := TempID;
+                First.Inf.Date := Date;
+                First.Inf.QueueNum := j;
+                inc(j);
+
+                First.Inf.Time := TempTime;
+                First.Inf.Patient.Surname := '';
+                First.Inf.Patient.FName := '';
+                First.Inf.Patient.MName := '';
+                TempTime.Hour := TempTime.Hour + (TempTime.Minute + 15) div 60;
+                TempTime.Minute := (TempTime.Minute + 15) mod 60;
+
+              end;
+              inc(Day);
+              Date := Date + 1;
+            end;
+          5:
+            begin
+              TempTime := TempPT.Data.Shledule.Thr.STime;
+              Writeln('Талоны на ', Day - 1, '-й день недели сгенерированы');
+              while (TempTime.Hour * 60 + TempTime.Minute) <
+                (TempPT.Data.Shledule.Thr.ETime.Hour * 60 +
+                TempPT.Data.Shledule.Thr.ETime.Minute) do
+              begin
+                New(First^.Next);
+                First := First^.Next;
+                First.Inf.DoctorID := TempID;
+                First.Inf.CabinetNum := TempID;
+                First.Inf.Date := Date;
+                First.Inf.QueueNum := j;
+                inc(j);
+                First.Inf.Time := TempTime;
+                First.Inf.Patient.Surname := '';
+                First.Inf.Patient.FName := '';
+                First.Inf.Patient.MName := '';
+                TempTime.Hour := TempTime.Hour + (TempTime.Minute + 15) div 60;
+                TempTime.Minute := (TempTime.Minute + 15) mod 60;
+
+              end;
+              inc(Day);
+              Date := Date + 1;
+            end;
+          4:
+            begin
+              TempTime := TempPT.Data.Shledule.Wed.STime;
+              Writeln('Талоны на ', Day - 1, '-й день недели сгенерированы');
+              while (TempTime.Hour * 60 + TempTime.Minute) <
+                (TempPT.Data.Shledule.Wed.ETime.Hour * 60 +
+                TempPT.Data.Shledule.Wed.ETime.Minute) do
+              begin
+                New(First^.Next);
+                First := First^.Next;
+                First.Inf.DoctorID := TempID;
+                First.Inf.CabinetNum := TempID;
+                First.Inf.Date := Date;
+                First.Inf.QueueNum := j;
+                inc(j);
+                First.Inf.Time := TempTime;
+                First.Inf.Patient.Surname := '';
+                First.Inf.Patient.FName := '';
+                First.Inf.Patient.MName := '';
+                TempTime.Hour := TempTime.Hour + (TempTime.Minute + 15) div 60;
+                TempTime.Minute := (TempTime.Minute + 15) mod 60;
+
+              end;
+              inc(Day);
+              Date := Date + 1;
+            end;
+          6:
+            begin
+              TempTime := TempPT.Data.Shledule.Fri.STime;
+              Writeln('Талоны на ', Day - 1, '-й день недели сгенерированы');
+              while (TempTime.Hour * 60 + TempTime.Minute) <
+                (TempPT.Data.Shledule.Fri.ETime.Hour * 60 +
+                TempPT.Data.Shledule.Fri.ETime.Minute) do
+              begin
+                New(First^.Next);
+                First := First^.Next;
+                First.Inf.DoctorID := TempID;
+                First.Inf.CabinetNum := TempID;
+                First.Inf.Date := Date;
+                First.Inf.QueueNum := j;
+                inc(j);
+                First.Inf.Time := TempTime;
+                First.Inf.Patient.Surname := '';
+                First.Inf.Patient.FName := '';
+                First.Inf.Patient.MName := '';
+                TempTime.Hour := TempTime.Hour + (TempTime.Minute + 15) div 60;
+                TempTime.Minute := (TempTime.Minute + 15) mod 60;
+
+              end;
+              inc(Day);
+              Date := Date + 1;
+            end;
+          7:
+            begin
+              TempTime := TempPT.Data.Shledule.Sat.STime;
+              Writeln('Талоны на ', Day - 1, '-й день недели сгенерированы');
+              while (TempTime.Hour * 60 + TempTime.Minute) <
+                (TempPT.Data.Shledule.Sat.ETime.Hour * 60 +
+                TempPT.Data.Shledule.Sat.ETime.Minute) do
+              begin
+                New(First^.Next);
+                First := First^.Next;
+                First.Inf.DoctorID := TempID;
+                First.Inf.CabinetNum := TempID;
+                First.Inf.Date := Date;
+                First.Inf.QueueNum := j;
+                inc(j);
+                First.Inf.Time := TempTime;
+                First.Inf.Patient.Surname := '';
+                First.Inf.Patient.FName := '';
+                First.Inf.Patient.MName := '';
+                TempTime.Hour := TempTime.Hour + (TempTime.Minute + 15) div 60;
+                TempTime.Minute := (TempTime.Minute + 15) mod 60;
+
+              end;
+              inc(Day);
+              Date := Date + 1;
+            end;
+        else
+          begin
+            Day := 2;
+            Date := Date + 1;
+          end;
+        end;
+      end;
+    end
+    else
+    begin
+      while (First^.Next <> nil) do
+      begin
+        First := First^.Next;
+      end;
+      for var k := 1 to 7 do
+      begin
+        j := 1;
+        case Day of
+          1:
+            begin
+              inc(Day);
+              Date := Date + 1;
+            end;
+          2:
+            begin
+              TempTime := TempPT.Data.Shledule.Mon.STime;
+              Writeln('Талоны на ', Day - 1, '-й день недели сгенерированы');
+              while (TempTime.Hour * 60 + TempTime.Minute) <
+                (TempPT.Data.Shledule.Mon.ETime.Hour * 60 +
+                TempPT.Data.Shledule.Mon.ETime.Minute) do
+              begin
+                New(First^.Next);
+                First := First^.Next;
+                First.Inf.DoctorID := TempID;
+                First.Inf.CabinetNum := TempID;
+                First.Inf.Date := Date;
+                First.Inf.QueueNum := j;
+                inc(j);
+                First.Inf.Time := TempTime;
+                First.Inf.Patient.Surname := '';
+                First.Inf.Patient.FName := '';
+                First.Inf.Patient.MName := '';
+                TempTime.Hour := TempTime.Hour + (TempTime.Minute + 15) div 60;
+                TempTime.Minute := (TempTime.Minute + 15) mod 60;
+
+              end;
+              inc(Day);
+              Date := Date + 1;
+            end;
+          3:
+            begin
+              TempTime := TempPT.Data.Shledule.Tue.STime;
+              Writeln('Талоны на ', Day - 1, '-й день недели сгенерированы');
+              while (TempTime.Hour * 60 + TempTime.Minute) <
+                (TempPT.Data.Shledule.Tue.ETime.Hour * 60 +
+                TempPT.Data.Shledule.Tue.ETime.Minute) do
+              begin
+                New(First^.Next);
+                First := First^.Next;
+                First.Inf.DoctorID := TempID;
+                First.Inf.CabinetNum := TempID;
+                First.Inf.Date := Date;
+                First.Inf.QueueNum := j;
+                inc(j);
+                First.Inf.Time := TempTime;
+                First.Inf.Patient.Surname := '';
+                First.Inf.Patient.FName := '';
+                First.Inf.Patient.MName := '';
+                TempTime.Hour := TempTime.Hour + (TempTime.Minute + 15) div 60;
+                TempTime.Minute := (TempTime.Minute + 15) mod 60;
+
+              end;
+              inc(Day);
+              Date := Date + 1;
+            end;
+          5:
+            begin
+              TempTime := TempPT.Data.Shledule.Thr.STime;
+              Writeln('Талоны на ', Day - 1, '-й день недели сгенерированы');
+              while (TempTime.Hour * 60 + TempTime.Minute) <
+                (TempPT.Data.Shledule.Thr.ETime.Hour * 60 +
+                TempPT.Data.Shledule.Thr.ETime.Minute) do
+              begin
+                New(First^.Next);
+                First := First^.Next;
+                First.Inf.DoctorID := TempID;
+                First.Inf.CabinetNum := TempID;
+                First.Inf.Date := Date;
+                First.Inf.QueueNum := j;
+                inc(j);
+                First.Inf.Time := TempTime;
+                First.Inf.Patient.Surname := '';
+                First.Inf.Patient.FName := '';
+                First.Inf.Patient.MName := '';
+                TempTime.Hour := TempTime.Hour + (TempTime.Minute + 15) div 60;
+                TempTime.Minute := (TempTime.Minute + 15) mod 60;
+
+              end;
+              inc(Day);
+              Date := Date + 1;
+            end;
+          4:
+            begin
+              TempTime := TempPT.Data.Shledule.Wed.STime;
+              Writeln('Талоны на ', Day - 1, '-й день недели сгенерированы');
+              while (TempTime.Hour * 60 + TempTime.Minute) <
+                (TempPT.Data.Shledule.Wed.ETime.Hour * 60 +
+                TempPT.Data.Shledule.Wed.ETime.Minute) do
+              begin
+                New(First^.Next);
+                First := First^.Next;
+                First.Inf.DoctorID := TempID;
+                First.Inf.CabinetNum := TempID;
+                First.Inf.Date := Date;
+                First.Inf.QueueNum := j;
+                inc(j);
+                First.Inf.Time := TempTime;
+                First.Inf.Patient.Surname := '';
+                First.Inf.Patient.FName := '';
+                First.Inf.Patient.MName := '';
+                TempTime.Hour := TempTime.Hour + (TempTime.Minute + 15) div 60;
+                TempTime.Minute := (TempTime.Minute + 15) mod 60;
+
+              end;
+              inc(Day);
+              Date := Date + 1;
+            end;
+          6:
+            begin
+              TempTime := TempPT.Data.Shledule.Fri.STime;
+              Writeln('Талоны на ', Day - 1, '-й день недели сгенерированы');
+              while (TempTime.Hour * 60 + TempTime.Minute) <
+                (TempPT.Data.Shledule.Fri.ETime.Hour * 60 +
+                TempPT.Data.Shledule.Fri.ETime.Minute) do
+              begin
+                New(First^.Next);
+                First := First^.Next;
+                First.Inf.DoctorID := TempID;
+                First.Inf.CabinetNum := TempID;
+                First.Inf.Date := Date;
+                First.Inf.QueueNum := j;
+                inc(j);
+                First.Inf.Time := TempTime;
+                First.Inf.Patient.Surname := '';
+                First.Inf.Patient.FName := '';
+                First.Inf.Patient.MName := '';
+                TempTime.Hour := TempTime.Hour + (TempTime.Minute + 15) div 60;
+                TempTime.Minute := (TempTime.Minute + 15) mod 60;
+
+              end;
+              inc(Day);
+              Date := Date + 1;
+            end;
+          7:
+            begin
+              TempTime := TempPT.Data.Shledule.Sat.STime;
+              Writeln('Талоны на ', Day - 1, '-й день недели сгенерированы');
+              while (TempTime.Hour * 60 + TempTime.Minute) <
+                (TempPT.Data.Shledule.Sat.ETime.Hour * 60 +
+                TempPT.Data.Shledule.Sat.ETime.Minute) do
+              begin
+                New(First^.Next);
+                First := First^.Next;
+                First.Inf.DoctorID := TempID;
+                First.Inf.CabinetNum := TempID;
+                First.Inf.Date := Date;
+                First.Inf.QueueNum := j;
+                inc(j);
+                First.Inf.Time := TempTime;
+                First.Inf.Patient.Surname := '';
+                First.Inf.Patient.FName := '';
+                First.Inf.Patient.MName := '';
+                TempTime.Hour := TempTime.Hour + (TempTime.Minute + 15) div 60;
+                TempTime.Minute := (TempTime.Minute + 15) mod 60;
+
+              end;
+              inc(Day);
+              Date := Date + 1;
+            end;
+        else
+          begin
+            Day := 2;
+            Date := Date + 1;
+          end;
+        end;
+      end;
+    end;
+    First^.Next := nil;
+  end
+  else
+  begin
+    Writeln('Врачей с такой специализацией нет в базе данных!');
+  end;
+  Readln;
+  Clear;
+  MenuOptionsOutput;
+end;
+
+procedure MenuOptionsOutput;
+var
+  input, input2: Integer;
+  flag: Boolean;
+begin
+  flag := false;
+  Writeln('Выберите желаемую опцию');
+  Writeln('1. Чтение данных из файла'); // R
+  Writeln('2. Просмотр всего списка'); // R
+  Writeln('3. Сортировка данных'); // R?
+  Writeln('4. Поиск записи'); // R
+  Writeln('5. Добавление нового врача'); // R
+  Writeln('6. Удалить запись из списка'); // R/NR
+  Writeln('7. Корректировать запись из списка'); // R/NR
+  Writeln('8. Спец-фукнции'); // R
+  Writeln('9. Выйти из программы без сохранения изменений'); // R
+  Writeln('10. Выйти из программы с сохранением изменений'); // R
+  Write('Введите номер опции:');
+  while flag = false do
+  begin
+    try
+      Readln(input);
+      flag := True;
+    except
+      Writeln('Некорректный ввод!');
+    end;
+  end;
+  flag := false;
+  Clear;
+  case input of
+    1:
+      if not ReadFlag then
+      begin
+        ReadFromFile(FDPT, FTPT);
+      end
+      else
+      begin
+        Writeln('Файл уже прочитан!');
+        Readln;
+        Clear;
+        MenuOptionsOutput;
+      end;
+    3:
+      begin
+        Writeln('Выберите желаемую опцию');
+        Writeln('1. Сортировка списка врачей по специализации');
+        Writeln('2. Сортировка списка талонов по дате и времени');
+        Write('Введите номер опции:');
+        while flag = false do
+        begin
+          try
+            Readln(input2);
+            flag := True;
+          except
+            Writeln('Некорректный ввод!');
+          end;
+        end;
+        flag := false;
+        case input2 of
+          1:
+            begin
+              Sort(FDPT);
+            end;
+          2:
+            begin
+              Sort(FTPT);
+            end;
+        else
+          begin
+            Writeln('Вы ввели некорректное значение, пожалуйста введите значение в диапазоне от 1 до 2!');
+            Readln;
+            Clear;
+            MenuOptionsOutput;
+          end;
+        end;
+      end;
+    9:
+      ExitProgWithoutSaving;
+    10:
+      ExitProgWithSaving(FDPT, FTPT);
+    4:
+      begin
+        var
+          F, i, O: string;
+        Writeln('Выберите желаемую опцию');
+        Writeln('1. Поиск всех записей к врачу по специализации');
+        Writeln('2. Поиск записей о больном по ФИО');
+        Write('Введите номер опции:');
+        while flag = false do
+        begin
+          try
+            Readln(input2);
+            flag := True;
+          except
+            Writeln('Некорректный ввод!');
+          end;
+        end;
+        flag := false;
+        case input2 of
+          1:
+            begin
+              Write('Введите специализацию врача: ');
+              Readln(F);
+              Poisk(FDPT, FTPT, F);
+            end;
+          2:
+            begin
+              Write('Введите фамилию пациента: ');
+              Readln(F);
+              Write('Введите имя пациента: ');
+              Readln(i);
+              Write('Введите отчество пациента: ');
+              Readln(O);
+              Poisk(FTPT, F, i, O);
+            end;
+        else
+          begin
+            Writeln('Вы ввели некорректное значение, пожалуйста введите значение в диапазоне от 1 до 2!');
+            Readln;
+            Clear;
+            MenuOptionsOutput;
+          end;
+        end;
+
+      end;
+    5:
+      begin
+        Add(FDPT);
+      end;
+    6:
+      Delete(FDPT);
+    2:
+      begin
+        Writeln('Выберите желаемую опцию');
+        Writeln('1. Просмотр списка талонов');
+        Writeln('2. Просмотр списка врачей');
+        Write('Введите номер опции:');
+        while flag = false do
+        begin
+          try
+            Readln(input2);
+            flag := True;
+          except
+            Writeln('Некорректный ввод!');
+          end;
+        end;
+        flag := false;
+        case input2 of
+          1:
+            begin
+              View(FTPT);
+            end;
+          2:
+            begin
+              View(FDPT);
+            end;
+        else
+          begin
+            Writeln('Вы ввели некорректное значение, пожалуйста введите значение в диапазоне от 1 до 2!');
+            Readln;
+            Clear;
+            MenuOptionsOutput;
+          end;
+        end;
+      end;
+    7:
+      Correct(FDPT);
+    8:
+      begin
+        Writeln('Выберите желаемую опцию');
+        Writeln('1. Генерация талонов на неделю вперёд');
+        Writeln('2. Выдача талонов к врачу');
+        Write('Введите номер опции:');
+        while flag = false do
+        begin
+          try
+            Readln(input2);
+            flag := True;
+          except
+            Writeln('Некорректный ввод!');
+          end;
+        end;
+        flag := false;
+        case input2 of
+          1:
+            begin
+              Generate(FTPT, FDPT);
+            end;
+          2:
+            begin
+              Add(FTPT, FDPT);
+            end;
+        else
+          begin
+            Writeln('Вы ввели некорректное значение, пожалуйста введите значение в диапазоне от 1 до 2!');
+            Readln;
+            Clear;
+            MenuOptionsOutput;
+          end;
+        end;
+      end;
+  else
+    begin
+      Writeln('Вы ввели некорректное значение, пожалуйста введите значение в диапазоне от 1 до 10!');
+      Readln;
+      Clear;
+      MenuOptionsOutput;
+    end;
+  end;
+
+end;
+
+begin
+  TicketsCount := 0;
+  GlobID := 0;
+  ReadFlag := false;
+  MenuOptionsOutput;
+
+end.
