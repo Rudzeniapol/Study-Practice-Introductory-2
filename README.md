@@ -6,4 +6,4 @@ Task: *A list of doctor's vouchers is generated at the polyclinic. Each entry in
 * Provide the ability to add, delete and correct entries from lists, as well as view the lists in full.
 ---
 Made by Daniil Rudenya
-Used: Embarcadero Studio
+Used: Embarcadero Studio, ANSI Encoding (so Russian symbols will be showing as normal)
