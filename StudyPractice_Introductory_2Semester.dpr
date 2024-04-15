@@ -4,7 +4,7 @@ program StudyPractice_Introductory_2Semester;
 {$R *.res}
 
 uses
-  System.SysUtils, Windows;
+  System.SysUtils, Windows, IOUtils;
 
 type
   DoctorPointer = ^TDoctor;
@@ -100,236 +100,250 @@ procedure ReadFromFile(First: DoctorPointer; TFirst: TicketPointer);
 var
   Inp, TimeStr, FIO, IDStr, CabinetStr, QueueStr, DateStr, TempStr, HourStr,
     MinuteStr, FStr, IStr, OStr: string;
-  RFlag, TempFlag: Boolean;
+  RFlag, TempFlag, ExistFlag, Exist: Boolean;
   Counter, j: Integer;
 begin
+  Exist := false;
+  ExistFlag := false;
   Counter := 1;
   RFlag := false;
   Write('Введите название вашей больницы: ');
   Readln(Inp);
   Inp := AnsiLowerCase(Inp);
-  if not FileExists(Inp + '.dat') then
+  if DirectoryExists(Inp) then
   begin
-    Writeln('Такого файла не существует!');
-    Writeln('Возвращение в контекстное меню!');
-    Readln;
-    Clear;
-    MenuOptionsOutput;
-  end
-  else
-  begin
-    AssignFile(FDoctor, Inp + '.dat');
-    Reset(FDoctor);
-    while not EoF(FDoctor) do
+    if not FileExists(Inp + '.dat') then
     begin
-      if not RFlag then
-      begin
-        New(First);
-        FDPT := First;
-        Read(FDoctor, First.Data);
-        RFlag := True;
-      end
-      else
-      begin
-        New(First^.Next);
-        Read(FDoctor, First^.Next^.Data);
-        First := First^.Next;
-      end;
-    end;
-  end;
-  RFlag := false;
-  CloseFile(FDoctor);
-  while FileExists(Inp + '_Ticket_№' + IntToStr(Counter) + '.txt') do
-  begin
-    AssignFile(FTicket, Inp + '_Ticket_№' + IntToStr(Counter) + '.txt');
-    Reset(FTicket);
-    if not RFlag then
-    begin
-      j := 1;
-      FStr := '';
-      IStr := '';
-      OStr := '';
-      TempFlag := false;
-      HourStr := '';
-      MinuteStr := '';
-      FIO := '';
-      IDStr := '';
-      CabinetStr := '';
-      QueueStr := '';
-      DateStr := '';
-      TimeStr := '';
-      New(TFirst);
-      FTPT := TFirst;
-      Readln(FTicket);
-      Readln(FTicket, TempStr);
-      for var i := 13 to TempStr.Length do
-      begin
-        IDStr := IDStr + TempStr[i];
-      end;
-      TFirst.Inf.DoctorID := StrToInt(IDStr);
-      Readln(FTicket, TempStr);
-      for var i := 17 to TempStr.Length do
-      begin
-        CabinetStr := CabinetStr + TempStr[i];
-      end;
-      TFirst.Inf.CabinetNum := StrToInt(CabinetStr);
-      Readln(FTicket, TempStr);
-      for var i := 18 to TempStr.Length do
-      begin
-        QueueStr := QueueStr + TempStr[i];
-      end;
-      TFirst.Inf.QueueNum := StrToInt(QueueStr);
-      Readln(FTicket, TempStr);
-      for var i := 7 to TempStr.Length do
-      begin
-        DateStr := DateStr + TempStr[i];
-      end;
-      TFirst.Inf.Date := StrToDate(DateStr);
-      Readln(FTicket, TempStr);
-      for var i := 8 to TempStr.Length do
-      begin
-        TimeStr := TimeStr + TempStr[i];
-      end;
-      for var i := 1 to TimeStr.Length do
-      begin
-        if TimeStr[i] = ':' then
-        begin
-          TempFlag := True;
-        end
-        else
-        begin
-          if TempFlag then
-          begin
-            MinuteStr := MinuteStr + TimeStr[i];
-          end
-          else
-          begin
-            HourStr := HourStr + TimeStr[i];
-          end;
-        end;
-      end;
-      TFirst.Inf.Time.Hour := StrToInt(HourStr);
-      TFirst.Inf.Time.Minute := StrToInt(MinuteStr);
-      Readln(FTicket, TempStr);
-      for var i := 10 to TempStr.Length do
-      begin
-        FIO := FIO + TempStr[i];
-      end;
-      while FIO[j] <> ' ' do
-      begin
-        FStr := FStr + FIO[j];
-        inc(j);
-      end;
-      inc(j);
-      while FIO[j] <> ' ' do
-      begin
-        IStr := IStr + FIO[j];
-        inc(j);
-      end;
-      inc(j);
-      for var i := j to FIO.Length do
-        OStr := OStr + FIO[i];
-      TFirst.Inf.Patient.Surname := FStr;
-      TFirst.Inf.Patient.FName := IStr;
-      TFirst.Inf.Patient.MName := OStr;
-      RFlag := True;
+      Writeln('Файла с врачами не существует!');
     end
     else
     begin
-      j := 1;
-      FStr := '';
-      IStr := '';
-      OStr := '';
-      TempFlag := false;
-      HourStr := '';
-      MinuteStr := '';
-      FIO := '';
-      IDStr := '';
-      CabinetStr := '';
-      QueueStr := '';
-      DateStr := '';
-      TimeStr := '';
-      New(TFirst^.Next);
-      TFirst := TFirst^.Next;
-      Readln(FTicket);
-      Readln(FTicket, TempStr);
-      for var i := 13 to TempStr.Length do
+      Exist := true;
+      AssignFile(FDoctor, Inp + '.dat');
+      Reset(FDoctor);
+      while not EoF(FDoctor) do
       begin
-        IDStr := IDStr + TempStr[i];
-      end;
-      TFirst.Inf.DoctorID := StrToInt(IDStr);
-      Readln(FTicket, TempStr);
-      for var i := 17 to TempStr.Length do
-      begin
-        CabinetStr := CabinetStr + TempStr[i];
-      end;
-      TFirst.Inf.CabinetNum := StrToInt(CabinetStr);
-      Readln(FTicket, TempStr);
-      for var i := 18 to TempStr.Length do
-      begin
-        QueueStr := QueueStr + TempStr[i];
-      end;
-      TFirst.Inf.QueueNum := StrToInt(QueueStr);
-      Readln(FTicket, TempStr);
-      for var i := 7 to TempStr.Length do
-      begin
-        DateStr := DateStr + TempStr[i];
-      end;
-      TFirst.Inf.Date := StrToDate(DateStr);
-      Readln(FTicket, TempStr);
-      for var i := 8 to TempStr.Length do
-      begin
-        TimeStr := TimeStr + TempStr[i];
-      end;
-      for var i := 1 to TimeStr.Length do
-      begin
-        if TimeStr[i] = ':' then
+        if not RFlag then
         begin
-          TempFlag := True;
+          New(First);
+          FDPT := First;
+          Read(FDoctor, First.Data);
+          RFlag := true;
         end
         else
         begin
-          if TempFlag then
+          New(First^.Next);
+          Read(FDoctor, First^.Next^.Data);
+          First := First^.Next;
+        end;
+      end;
+    end;
+    RFlag := false;
+    CloseFile(FDoctor);
+    while FileExists(Inp + '_Ticket_№' + IntToStr(Counter) + '.txt') do
+    begin
+      AssignFile(FTicket, Inp + '_Ticket_№' + IntToStr(Counter) + '.txt');
+      Reset(FTicket);
+      ExistFlag := true;
+      if not RFlag then
+      begin
+        j := 1;
+        FStr := '';
+        IStr := '';
+        OStr := '';
+        TempFlag := false;
+        HourStr := '';
+        MinuteStr := '';
+        FIO := '';
+        IDStr := '';
+        CabinetStr := '';
+        QueueStr := '';
+        DateStr := '';
+        TimeStr := '';
+        New(TFirst);
+        FTPT := TFirst;
+        Readln(FTicket);
+        Readln(FTicket, TempStr);
+        for var i := 13 to TempStr.Length do
+        begin
+          IDStr := IDStr + TempStr[i];
+        end;
+        TFirst.Inf.DoctorID := StrToInt(IDStr);
+        Readln(FTicket, TempStr);
+        for var i := 17 to TempStr.Length do
+        begin
+          CabinetStr := CabinetStr + TempStr[i];
+        end;
+        TFirst.Inf.CabinetNum := StrToInt(CabinetStr);
+        Readln(FTicket, TempStr);
+        for var i := 18 to TempStr.Length do
+        begin
+          QueueStr := QueueStr + TempStr[i];
+        end;
+        TFirst.Inf.QueueNum := StrToInt(QueueStr);
+        Readln(FTicket, TempStr);
+        for var i := 7 to TempStr.Length do
+        begin
+          DateStr := DateStr + TempStr[i];
+        end;
+        TFirst.Inf.Date := StrToDate(DateStr);
+        Readln(FTicket, TempStr);
+        for var i := 8 to TempStr.Length do
+        begin
+          TimeStr := TimeStr + TempStr[i];
+        end;
+        for var i := 1 to TimeStr.Length do
+        begin
+          if TimeStr[i] = ':' then
           begin
-            MinuteStr := MinuteStr + TimeStr[i];
+            TempFlag := true;
           end
           else
           begin
-            HourStr := HourStr + TimeStr[i];
+            if TempFlag then
+            begin
+              MinuteStr := MinuteStr + TimeStr[i];
+            end
+            else
+            begin
+              HourStr := HourStr + TimeStr[i];
+            end;
           end;
         end;
-      end;
-      TFirst.Inf.Time.Hour := StrToInt(HourStr);
-      TFirst.Inf.Time.Minute := StrToInt(MinuteStr);
-      Readln(FTicket, TempStr);
-      for var i := 10 to TempStr.Length do
-      begin
-        FIO := FIO + TempStr[i];
-      end;
-      while FIO[j] <> ' ' do
-      begin
-        FStr := FStr + FIO[j];
+        TFirst.Inf.Time.Hour := StrToInt(HourStr);
+        TFirst.Inf.Time.Minute := StrToInt(MinuteStr);
+        Readln(FTicket, TempStr);
+        for var i := 10 to TempStr.Length do
+        begin
+          FIO := FIO + TempStr[i];
+        end;
+        while FIO[j] <> ' ' do
+        begin
+          FStr := FStr + FIO[j];
+          inc(j);
+        end;
         inc(j);
-      end;
-      inc(j);
-      while FIO[j] <> ' ' do
-      begin
-        IStr := IStr + FIO[j];
+        while FIO[j] <> ' ' do
+        begin
+          IStr := IStr + FIO[j];
+          inc(j);
+        end;
         inc(j);
+        for var i := j to FIO.Length do
+          OStr := OStr + FIO[i];
+        TFirst.Inf.Patient.Surname := FStr;
+        TFirst.Inf.Patient.FName := IStr;
+        TFirst.Inf.Patient.MName := OStr;
+        RFlag := true;
+      end
+      else
+      begin
+        j := 1;
+        FStr := '';
+        IStr := '';
+        OStr := '';
+        TempFlag := false;
+        HourStr := '';
+        MinuteStr := '';
+        FIO := '';
+        IDStr := '';
+        CabinetStr := '';
+        QueueStr := '';
+        DateStr := '';
+        TimeStr := '';
+        New(TFirst^.Next);
+        TFirst := TFirst^.Next;
+        Readln(FTicket);
+        Readln(FTicket, TempStr);
+        for var i := 13 to TempStr.Length do
+        begin
+          IDStr := IDStr + TempStr[i];
+        end;
+        TFirst.Inf.DoctorID := StrToInt(IDStr);
+        Readln(FTicket, TempStr);
+        for var i := 17 to TempStr.Length do
+        begin
+          CabinetStr := CabinetStr + TempStr[i];
+        end;
+        TFirst.Inf.CabinetNum := StrToInt(CabinetStr);
+        Readln(FTicket, TempStr);
+        for var i := 18 to TempStr.Length do
+        begin
+          QueueStr := QueueStr + TempStr[i];
+        end;
+        TFirst.Inf.QueueNum := StrToInt(QueueStr);
+        Readln(FTicket, TempStr);
+        for var i := 7 to TempStr.Length do
+        begin
+          DateStr := DateStr + TempStr[i];
+        end;
+        TFirst.Inf.Date := StrToDate(DateStr);
+        Readln(FTicket, TempStr);
+        for var i := 8 to TempStr.Length do
+        begin
+          TimeStr := TimeStr + TempStr[i];
+        end;
+        for var i := 1 to TimeStr.Length do
+        begin
+          if TimeStr[i] = ':' then
+          begin
+            TempFlag := true;
+          end
+          else
+          begin
+            if TempFlag then
+            begin
+              MinuteStr := MinuteStr + TimeStr[i];
+            end
+            else
+            begin
+              HourStr := HourStr + TimeStr[i];
+            end;
+          end;
+        end;
+        TFirst.Inf.Time.Hour := StrToInt(HourStr);
+        TFirst.Inf.Time.Minute := StrToInt(MinuteStr);
+        Readln(FTicket, TempStr);
+        for var i := 10 to TempStr.Length do
+        begin
+          FIO := FIO + TempStr[i];
+        end;
+        while FIO[j] <> ' ' do
+        begin
+          FStr := FStr + FIO[j];
+          inc(j);
+        end;
+        inc(j);
+        while FIO[j] <> ' ' do
+        begin
+          IStr := IStr + FIO[j];
+          inc(j);
+        end;
+        inc(j);
+        for var i := j to FIO.Length do
+          OStr := OStr + FIO[i];
+        TFirst.Inf.Patient.Surname := FStr;
+        TFirst.Inf.Patient.FName := IStr;
+        TFirst.Inf.Patient.MName := OStr;
       end;
-      inc(j);
-      for var i := j to FIO.Length do
-        OStr := OStr + FIO[i];
-      TFirst.Inf.Patient.Surname := FStr;
-      TFirst.Inf.Patient.FName := IStr;
-      TFirst.Inf.Patient.MName := OStr;
+      inc(Counter);
+      CloseFile(FTicket);
     end;
-    inc(Counter);
-    CloseFile(FTicket);
+    if not ExistFlag then
+    begin
+      Writeln('Файлов с билетами не существует!');
+    end
+    else
+    begin
+      TFirst^.Next := nil;
+      Writeln('Данные успешно считаны из файла!');
+    end;
+    ReadFlag := ExistFlag or Exist;
+  end
+  else
+  begin
+    Writeln('Таких данных нет!');
   end;
-  TFirst^.Next := nil;
-  ReadFlag := True;
-  Writeln('Данные успешно считаны из файла!');
   Readln;
   Clear;
   MenuOptionsOutput;
@@ -349,7 +363,12 @@ begin
     Write('Введите название вашей больницы: ');
     Readln(Inp);
     Inp := AnsiLowerCase(Inp);
-    AssignFile(FDoctor, Inp + '.dat');
+    if DirectoryExists(Inp) then
+    begin
+      TDirectory.Delete(Inp);
+    end;
+    MkDir(Inp);
+    AssignFile(FDoctor, Inp + '/' + Inp + '.dat');
     Rewrite(FDoctor);
     while First <> nil do
     begin
@@ -360,7 +379,8 @@ begin
     while TFirst <> nil do
     begin
       inc(Counter);
-      AssignFile(FTicket, Inp + '_Ticket_№' + IntToStr(Counter) + '.txt');
+      AssignFile(FTicket, Inp + '/' + Inp + '_Ticket_№' + IntToStr(Counter)
+        + '.txt');
       Rewrite(FTicket);
       Writeln(FTicket,
         '------------------------------------------------------------');
@@ -379,7 +399,7 @@ begin
     end;
     for var i := Counter + 1 to TicketsCount do
     begin
-      AssignFile(FTicket, Inp + '_Ticket_№' + IntToStr(i) + '.txt');
+      AssignFile(FTicket, Inp + '/' + Inp + '_Ticket_№' + IntToStr(i) + '.txt');
       Erase(FTicket);
       CloseFile(FTicket);
     end;
@@ -409,7 +429,12 @@ begin
         Write('Введите название вашей больницы: ');
         Readln(Inp);
         Inp := AnsiLowerCase(Inp);
-        AssignFile(FDoctor, Inp + '.dat');
+        if DirectoryExists(Inp) then
+        begin
+          TDirectory.Delete(Inp);
+        end;
+        MkDir(Inp);
+        AssignFile(FDoctor, Inp + '/' + Inp + '.dat');
         Rewrite(FDoctor);
         while First <> nil do
         begin
@@ -420,7 +445,8 @@ begin
         while TFirst <> nil do
         begin
           inc(Counter);
-          AssignFile(FTicket, Inp + '_Ticket_№' + IntToStr(Counter) + '.txt');
+          AssignFile(FTicket, Inp + '/' + Inp + '_Ticket_№' + IntToStr(Counter)
+            + '.txt');
           Rewrite(FTicket);
           Writeln(FTicket,
             '------------------------------------------------------------');
@@ -440,7 +466,8 @@ begin
         end;
         for var i := Counter + 1 to TicketsCount do
         begin
-          AssignFile(FTicket, Inp + '_Ticket_№' + IntToStr(i) + '.txt');
+          AssignFile(FTicket, Inp + '/' + Inp + '_Ticket_№' + IntToStr(i)
+            + '.txt');
           Erase(FTicket);
           CloseFile(FTicket);
         end;
@@ -531,7 +558,7 @@ begin
     begin
       if (AnsiUpperCase(FirstD.Data.Specialization) = AnsiUpperCase(Spec)) then
       begin
-        DocFlag := True;
+        DocFlag := true;
         SetLength(Arr, Cnt);
         Arr[Cnt - 1] := FirstD;
         Writeln(Cnt, '.');
@@ -553,7 +580,7 @@ begin
         try
           Readln(Inpt);
           TempID := Arr[Inpt - 1].Data.ID;
-          inpflag := True;
+          inpflag := true;
         except
           Writeln('Некорректный ввод! Введите корректное значение!');
         end;
@@ -574,12 +601,12 @@ begin
                 inc(Cnt);
             end;
             if Cnt = 2 then
-              DateFlag := True
+              DateFlag := true
             else
               Writeln('Вы некорректно ввели дату!');
           end;
           Date := StrTodateTime(Inp);
-          inpflag := True;
+          inpflag := true;
         except
           Writeln('Некорректный ввод! Введите корректно!');
         end;
@@ -591,7 +618,7 @@ begin
           Write('Введите время талона(Часы): ');
           Readln(Inp);
           Hours := StrToInt(Inp);
-          inpflag := True;
+          inpflag := true;
         except
           Writeln('Некорректный ввод!');
         end;
@@ -603,7 +630,7 @@ begin
           Write('Введите время талона(Минуты): ');
           Readln(Inp);
           Minutes := StrToInt(Inp);
-          inpflag := True;
+          inpflag := true;
         except
           Writeln('Некорректный ввод!');
         end;
@@ -616,7 +643,7 @@ begin
           (TempID = First^.Next.Inf.DoctorID) then
         begin
           First^.Next := First^.Next^.Next;
-          flag := True;
+          flag := true;
         end
         else
           First := First.Next;
@@ -626,14 +653,14 @@ begin
       then
       begin
         First := nil;
-        flag := True;
+        flag := true;
       end;
       if (FTPT^.Next.Inf.Date = Date) and (FTPT^.Next.Inf.Time.Hour = Hours) and
         (FTPT^.Next.Inf.Time.Minute = Minutes) and (FTPT^.Inf.DoctorID = TempID)
       then
       begin
         FTPT := FTPT.Next;
-        flag := True;
+        flag := true;
       end;
       if flag then
       begin
@@ -709,7 +736,7 @@ begin
         begin
           ID := First^.Next^.Data.ID;
           First^.Next := First^.Next^.Next;
-          flag := True;
+          flag := true;
           Writeln('Врач удалён из списка');
         end
         else
@@ -770,7 +797,7 @@ begin
         Writeln('ФИО Пациента: ', First.Inf.Patient.Surname, ' ',
           First.Inf.Patient.FName, ' ', First.Inf.Patient.MName);
         inc(i);
-        flag := True;
+        flag := true;
       end;
       First := First^.Next;
     end;
@@ -803,7 +830,7 @@ begin
     begin
       if (AnsiUpperCase(FirstD.Data.Specialization) = AnsiUpperCase(Spec)) then
       begin
-        flag := True;
+        flag := true;
         Writeln(i, '.');
         Writeln('ФИО Врача: ', FirstD.Data.Surname, ' ', FirstD.Data.FName, ' ',
           FirstD.Data.MName);
@@ -849,7 +876,7 @@ begin
             (First.Inf.Patient.FName <> '') and (First.Inf.Patient.MName <> '')
           then
           begin
-            flagRec := True;
+            flagRec := true;
             Writeln('ID врача: ', First.Inf.DoctorID);
             Writeln('Номер кабинета: ', First.Inf.CabinetNum);
             Writeln('Номер в очереди: ', First.Inf.QueueNum);
@@ -907,40 +934,43 @@ begin
     begin
       if AnsiUpperCase(TempPT.Data.Specialization) = AnsiUpperCase(Spec) then
       begin
-        FindFlag := True;
+        FindFlag := true;
         SetLength(Arr, Cnt);
         Arr[Cnt - 1] := TempPT;
         Writeln(Cnt, '.');
-        Writeln('ФИО Врача: ', First.Data.Surname, ' ', First.Data.FName, ' ',
-          First.Data.MName);
-        Writeln('ID Врача: ', First.Data.ID);
-        Writeln('Специализация: ', First.Data.Specialization);
+        Writeln('ФИО Врача: ', TempPT.Data.Surname, ' ', TempPT.Data.FName, ' ',
+          TempPT.Data.MName);
+        Writeln('ID Врача: ', TempPT.Data.ID);
+        Writeln('Специализация: ', TempPT.Data.Specialization);
         Writeln('Начало работы в понедельник: ',
-          First.Data.Shledule.Mon.STime.Hour, ':',
-          First.Data.Shledule.Mon.STime.Minute, ' Конец работы в понедельник: ',
-          First.Data.Shledule.Mon.ETime.Hour, ':',
-          First.Data.Shledule.Mon.ETime.Minute);
+          TempPT.Data.Shledule.Mon.STime.Hour, ':',
+          TempPT.Data.Shledule.Mon.STime.Minute,
+          ' Конец работы в понедельник: ', TempPT.Data.Shledule.Mon.ETime.Hour,
+          ':', TempPT.Data.Shledule.Mon.ETime.Minute);
         Writeln('Начало работы во вторник: ',
-          First.Data.Shledule.Tue.STime.Hour, ':',
-          First.Data.Shledule.Tue.STime.Minute, ' Конец работы во вторник: ',
-          First.Data.Shledule.Tue.ETime.Hour, ':',
-          First.Data.Shledule.Tue.ETime.Minute);
-        Writeln('Начало работы в среду: ', First.Data.Shledule.Wed.STime.Hour,
-          ':', First.Data.Shledule.Wed.STime.Minute, ' Конец работы в среду: ',
-          First.Data.Shledule.Wed.ETime.Hour, ':',
-          First.Data.Shledule.Wed.ETime.Minute);
-        Writeln('Начало работы в четверг: ', First.Data.Shledule.Thr.STime.Hour,
-          ':', First.Data.Shledule.Thr.STime.Minute,
-          ' Конец работы в четверг: ', First.Data.Shledule.Thr.ETime.Hour, ':',
-          First.Data.Shledule.Thr.ETime.Minute);
-        Writeln('Начало работы в пятницу: ', First.Data.Shledule.Fri.STime.Hour,
-          ':', First.Data.Shledule.Fri.STime.Minute,
-          ' Конец работы в пятницу: ', First.Data.Shledule.Fri.ETime.Hour, ':',
-          First.Data.Shledule.Fri.ETime.Minute);
-        Writeln('Начало работы в субботу: ', First.Data.Shledule.Sat.STime.Hour,
-          ':', First.Data.Shledule.Sat.STime.Minute,
-          ' Конец работы в субботу: ', First.Data.Shledule.Sat.ETime.Hour, ':',
-          First.Data.Shledule.Sat.ETime.Minute);
+          TempPT.Data.Shledule.Tue.STime.Hour, ':',
+          TempPT.Data.Shledule.Tue.STime.Minute, ' Конец работы во вторник: ',
+          TempPT.Data.Shledule.Tue.ETime.Hour, ':',
+          TempPT.Data.Shledule.Tue.ETime.Minute);
+        Writeln('Начало работы в среду: ', TempPT.Data.Shledule.Wed.STime.Hour,
+          ':', TempPT.Data.Shledule.Wed.STime.Minute, ' Конец работы в среду: ',
+          TempPT.Data.Shledule.Wed.ETime.Hour, ':',
+          TempPT.Data.Shledule.Wed.ETime.Minute);
+        Writeln('Начало работы в четверг: ',
+          TempPT.Data.Shledule.Thr.STime.Hour, ':',
+          TempPT.Data.Shledule.Thr.STime.Minute, ' Конец работы в четверг: ',
+          TempPT.Data.Shledule.Thr.ETime.Hour, ':',
+          TempPT.Data.Shledule.Thr.ETime.Minute);
+        Writeln('Начало работы в пятницу: ',
+          TempPT.Data.Shledule.Fri.STime.Hour, ':',
+          TempPT.Data.Shledule.Fri.STime.Minute, ' Конец работы в пятницу: ',
+          TempPT.Data.Shledule.Fri.ETime.Hour, ':',
+          TempPT.Data.Shledule.Fri.ETime.Minute);
+        Writeln('Начало работы в субботу: ',
+          TempPT.Data.Shledule.Sat.STime.Hour, ':',
+          TempPT.Data.Shledule.Sat.STime.Minute, ' Конец работы в субботу: ',
+          TempPT.Data.Shledule.Sat.ETime.Hour, ':',
+          TempPT.Data.Shledule.Sat.ETime.Minute);
         inc(Cnt);
         Writeln;
         Writeln;
@@ -954,7 +984,7 @@ begin
       begin
         try
           Readln(Inp);
-          flag := True;
+          flag := true;
         except
           Writeln('Некорректный ввод!');
         end;
@@ -968,7 +998,7 @@ begin
         begin
           try
             Readln(Inp);
-            flag := True;
+            flag := true;
           except
             Writeln('Некорректный ввод!');
           end;
@@ -986,7 +1016,7 @@ begin
       begin
         try
           Readln(Inp);
-          flag := True;
+          flag := true;
         except
           Writeln('Некорректный ввод!');
         end;
@@ -1029,7 +1059,7 @@ begin
           begin
             try
               Readln(input);
-              flag := True;
+              flag := true;
             except
               Writeln('Некорректный ввод!');
             end;
@@ -1079,7 +1109,7 @@ begin
     begin
       if (AnsiUpperCase(FirstD.Data.Specialization) = AnsiUpperCase(Spec)) then
       begin
-        DocFlag := True;
+        DocFlag := true;
         SetLength(Arr, Cnt);
         Arr[Cnt - 1] := FirstD;
         Writeln(Cnt, '.');
@@ -1101,7 +1131,7 @@ begin
         try
           Readln(Inpt);
           TempID := Arr[Inpt - 1].Data.ID;
-          inpflag := True;
+          inpflag := true;
         except
           Writeln('Некорректный ввод! Введите корректное значение!');
         end;
@@ -1122,12 +1152,12 @@ begin
                 inc(Cnt);
             end;
             if Cnt = 2 then
-              DateFlag := True
+              DateFlag := true
             else
               Writeln('Вы некорректно ввели дату!');
           end;
           Date := StrTodateTime(Inp);
-          inpflag := True;
+          inpflag := true;
         except
           Writeln('Некорректный ввод! Введите корректно!');
         end;
@@ -1139,7 +1169,7 @@ begin
           Write('Введите время талона(Часы): ');
           Readln(Inp);
           Hours := StrToInt(Inp);
-          inpflag := True;
+          inpflag := true;
         except
           Writeln('Некорректный ввод!');
         end;
@@ -1151,7 +1181,7 @@ begin
           Write('Введите время талона(Минуты): ');
           Readln(Inp);
           Minutes := StrToInt(Inp);
-          inpflag := True;
+          inpflag := true;
         except
           Writeln('Некорректный ввод!');
         end;
@@ -1198,7 +1228,7 @@ begin
             First.Inf.Patient.Surname := F;
             First.Inf.Patient.FName := i;
             First.Inf.Patient.MName := O;
-            flag := True;
+            flag := true;
           end;
         end;
         First := First.Next;
@@ -1849,7 +1879,7 @@ begin
             '-й день недели (Часы): ');
           Readln(Inp);
           SHours := StrToInt(Inp);
-          flag := True;
+          flag := true;
         except
           Writeln('Некорректный ввод!');
         end;
@@ -1862,7 +1892,7 @@ begin
             '-й день недели (Минуты): ');
           Readln(Inp);
           SMinutes := StrToInt(Inp);
-          flag := True;
+          flag := true;
         except
           Writeln('Некорректный ввод!');
         end;
@@ -1875,7 +1905,7 @@ begin
             '-й день недели (Часы): ');
           Readln(Inp);
           EHours := StrToInt(Inp);
-          flag := True;
+          flag := true;
         except
           Writeln('Некорректный ввод!');
         end;
@@ -1888,7 +1918,7 @@ begin
             '-й день недели (Минуты): ');
           Readln(Inp);
           EMinutes := StrToInt(Inp);
-          flag := True;
+          flag := true;
         except
           Writeln('Некорректный ввод!');
         end;
@@ -1960,7 +1990,7 @@ begin
   Write('Введите специализацию нового врача: ');
   Readln(Spec);
   if First = nil then
-    FirstFlag := True
+    FirstFlag := true
   else
     while First^.Next <> nil do
     begin
@@ -2080,7 +2110,7 @@ begin
           Readln(Inpt);
           TempDPT := Arr[Inpt - 1];
           TempID := Arr[Inpt - 1].Data.ID;
-          inpflag := True;
+          inpflag := true;
         except
           Write('Некорректный ввод! Введите корректное значение: ');
         end;
@@ -2093,7 +2123,7 @@ begin
           and (TempPT.Inf.Patient.FName = '') and (TempPT.Inf.DoctorID = TempID)
         then
         begin
-          flag := True;
+          flag := true;
         end;
         TempPT := TempPT^.Next;
       end;
@@ -2208,7 +2238,7 @@ begin
             begin
               TempPT := FreeTickets[Inpt - 1];
             end;
-            inpflag := True;
+            inpflag := true;
           except
             Write('Некорректный ввод! Введите корректное значение: ');
           end;
@@ -2381,7 +2411,7 @@ begin
   begin
     if (AnsiUpperCase(FirstD.Data.Specialization) = AnsiUpperCase(Spec)) then
     begin
-      flag := True;
+      flag := true;
       SetLength(Arr, Cnt);
       Arr[Cnt - 1] := FirstD;
       Writeln(Cnt, '.');
@@ -2429,7 +2459,7 @@ begin
         Readln(Inpt);
         TempPT := Arr[Inpt - 1];
         TempID := Arr[Inpt - 1].Data.ID;
-        inpflag := True;
+        inpflag := true;
       except
         Writeln('Некорректный ввод! Введите корректное значение!');
       end;
@@ -2451,12 +2481,12 @@ begin
               inc(Cnt);
           end;
           if Cnt = 2 then
-            DateFlag := True
+            DateFlag := true
           else
             Writeln('Вы некорректно ввели дату!');
         end;
         Date := StrTodateTime(Inp);
-        inpflag := True;
+        inpflag := true;
       except
         Writeln('Некорректный ввод! Введите корректно!');
       end;
@@ -2480,7 +2510,7 @@ begin
             begin
               if not ptflag then
               begin
-                ptflag := True;
+                ptflag := true;
               end
               else
               begin
@@ -2512,7 +2542,7 @@ begin
             begin
               if not ptflag then
               begin
-                ptflag := True;
+                ptflag := true;
               end
               else
               begin
@@ -2544,7 +2574,7 @@ begin
             begin
               if not ptflag then
               begin
-                ptflag := True;
+                ptflag := true;
               end
               else
               begin
@@ -2577,7 +2607,7 @@ begin
             begin
               if not ptflag then
               begin
-                ptflag := True;
+                ptflag := true;
               end
               else
               begin
@@ -2610,7 +2640,7 @@ begin
             begin
               if not ptflag then
               begin
-                ptflag := True;
+                ptflag := true;
               end
               else
               begin
@@ -2643,7 +2673,7 @@ begin
             begin
               if not ptflag then
               begin
-                ptflag := True;
+                ptflag := true;
               end
               else
               begin
@@ -3058,7 +3088,7 @@ begin
   begin
     try
       Readln(input);
-      flag := True;
+      flag := true;
     except
       Writeln('Некорректный ввод!');
     end;
@@ -3088,7 +3118,7 @@ begin
         begin
           try
             Readln(input2);
-            flag := True;
+            flag := true;
           except
             Writeln('Некорректный ввод!');
           end;
@@ -3128,7 +3158,7 @@ begin
         begin
           try
             Readln(input2);
-            flag := True;
+            flag := true;
           except
             Writeln('Некорректный ввод!');
           end;
@@ -3175,7 +3205,7 @@ begin
         begin
           try
             Readln(input2);
-            flag := True;
+            flag := true;
           except
             Writeln('Некорректный ввод!');
           end;
@@ -3209,7 +3239,7 @@ begin
         begin
           try
             Readln(input2);
-            flag := True;
+            flag := true;
           except
             Writeln('Некорректный ввод!');
           end;
@@ -3243,7 +3273,7 @@ begin
         begin
           try
             Readln(input2);
-            flag := True;
+            flag := true;
           except
             Writeln('Некорректный ввод!');
           end;
@@ -3277,7 +3307,7 @@ begin
         begin
           try
             Readln(input2);
-            flag := True;
+            flag := true;
           except
             Writeln('Некорректный ввод!');
           end;
