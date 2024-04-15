@@ -505,15 +505,19 @@ end;
 
 procedure Delete(First: TicketPointer); overload;
 var
-  flag, inpflag, DateFlag: Boolean;
-  Cnt: Integer;
+  flag, inpflag, DateFlag, DocFlag: Boolean;
+  Cnt, Inpt, TempID: Integer;
   Date: TDateTime;
   Hours: THour;
   Minutes: TMinute;
-  Inp: string;
+  Inp, Spec: string;
+  FirstD: DoctorPointer;
+  Arr: array of DoctorPointer;
 begin
-  flag:=false;
-  DateFlag:=false;
+  cnt:=1;
+  FirstD := FDPT;
+  flag := false;
+  DateFlag := false;
   if First = nil then
   begin
     Writeln('Список пуст!');
@@ -521,74 +525,129 @@ begin
   else
   begin
     inpflag := false;
-    while inpflag = false do
+    Write('Введите желаемую специализацию:');
+    Readln(Spec);
+    while FirstD <> nil do
     begin
-      try
-        DateFlag := false;
-        while not DateFlag do
-        begin
-          Write('Введите дату удаляемого талона (в формате Месяц/День/Год): ');
-          Readln(Inp);
-          Cnt := 0;
-          for var s := 1 to Length(Inp) do
-          begin
-            if Inp[s] = '/' then
-              inc(Cnt);
-          end;
-          if Cnt = 2 then
-            DateFlag := True
-          else
-            Writeln('Вы некорректно ввели дату!');
+      if (AnsiUpperCase(FirstD.Data.Specialization) = AnsiUpperCase(Spec)) then
+      begin
+        DocFlag := True;
+        SetLength(Arr, Cnt);
+        Arr[Cnt - 1] := FirstD;
+        Writeln(Cnt, '.');
+        Writeln('ФИО Врача: ', FirstD.Data.Surname, ' ', FirstD.Data.FName, ' ',
+          FirstD.Data.MName);
+        Writeln('ID Врача: ', FirstD.Data.ID);
+        Writeln('Специализация: ', FirstD.Data.Specialization);
+        Writeln;
+        Writeln;
+        inc(Cnt);
+      end;
+      FirstD := FirstD^.Next;
+    end;
+    if DocFlag then
+    begin
+      Write('Введите номер желаемого врача для удаления талона: ');
+      while inpflag = false do
+      begin
+        try
+          Readln(Inpt);
+          TempID := Arr[Inpt - 1].Data.ID;
+          inpflag := True;
+        except
+          Writeln('Некорректный ввод! Введите корректное значение!');
         end;
-        Date := StrTodateTime(Inp);
-        inpflag := True;
-      except
-        Writeln('Некорректный ввод! Введите корректно!');
       end;
-    end;
-    inpflag := false;
-    while inpflag = false do
-    begin
-      try
-        Write('Введите время талона(Часы): ');
-        Readln(Inp);
-        Hours := StrToInt(Inp);
-        inpflag := True;
-      except
-        Writeln('Некорректный ввод!');
+      InpFlag:=false;
+      while inpflag = false do
+      begin
+        try
+          DateFlag := false;
+          while not DateFlag do
+          begin
+            Write('Введите дату удаляемого талона (в формате Месяц/День/Год): ');
+            Readln(Inp);
+            Cnt := 0;
+            for var s := 1 to Length(Inp) do
+            begin
+              if Inp[s] = '/' then
+                inc(Cnt);
+            end;
+            if Cnt = 2 then
+              DateFlag := True
+            else
+              Writeln('Вы некорректно ввели дату!');
+          end;
+          Date := StrTodateTime(Inp);
+          inpflag := True;
+        except
+          Writeln('Некорректный ввод! Введите корректно!');
+        end;
       end;
-    end;
-    inpflag := false;
-    while inpflag = false do
-    begin
-      try
-        Write('Введите время талона(Минуты): ');
-        Readln(Inp);
-        Minutes := StrToInt(Inp);
-        inpflag := True;
-      except
-        Writeln('Некорректный ввод!');
+      inpflag := false;
+      while inpflag = false do
+      begin
+        try
+          Write('Введите время талона(Часы): ');
+          Readln(Inp);
+          Hours := StrToInt(Inp);
+          inpflag := True;
+        except
+          Writeln('Некорректный ввод!');
+        end;
       end;
-    end;
-    inpflag := false;
-  end;
-  while First^.Next<>nil do
-  begin
-    if (First^.Next.Inf.Date = Date) and (First^.Next.Inf.Time.Hour = Hours) and (First^.Next.Inf.Time.Minute = Minutes) then
-    begin
-      First^.Next:= First^.Next^.Next;
-      flag:=true;
+      inpflag := false;
+      while inpflag = false do
+      begin
+        try
+          Write('Введите время талона(Минуты): ');
+          Readln(Inp);
+          Minutes := StrToInt(Inp);
+          inpflag := True;
+        except
+          Writeln('Некорректный ввод!');
+        end;
+      end;
+      inpflag := false;
+      while First^.Next <> nil do
+      begin
+        if (First^.Next.Inf.Date = Date) and (First^.Next.Inf.Time.Hour = Hours)
+          and (First^.Next.Inf.Time.Minute = Minutes) and
+          (TempID = First^.Next.Inf.DoctorID) then
+        begin
+          First^.Next := First^.Next^.Next;
+          flag := True;
+        end
+        else
+          First := First.Next;
+      end;
+      if (First^.Inf.Date = Date) and (First^.Inf.Time.Hour = Hours) and
+        (First^.Inf.Time.Minute = Minutes) and (First^.Inf.DoctorID = TempID)
+      then
+      begin
+        First := nil;
+        flag := True;
+      end;
+      if (FTPT^.Next.Inf.Date = Date) and (FTPT^.Next.Inf.Time.Hour = Hours) and
+        (FTPT^.Next.Inf.Time.Minute = Minutes) and (FTPT^.Inf.DoctorID = TempID)
+      then
+      begin
+        FTPT := FTPT.Next;
+        flag := True;
+      end;
+      if flag then
+      begin
+        Writeln('Талон успешно удалён');
+      end
+      else
+      begin
+        Writeln('Такого талона нет в базе! Возвращение в контекстное меню.');
+      end;
     end
     else
-    First:=First.Next;
-  end;
-  if flag then
-  begin
-    Writeln('Талон успешно удалён');
-  end
-  else
-  begin
-    Writeln('Такого талона нет в базе! Возвращение в контекстное меню.');
+    begin
+      Writeln('Врачей с такой специализацией нет в базе данных!');
+    end;
   end;
   Readln;
   Clear;
@@ -2820,7 +2879,7 @@ begin
   Writeln('3. Сортировка данных'); // R?
   Writeln('4. Поиск записи'); // R
   Writeln('5. Добавление нового врача'); // R
-  Writeln('6. Удалить запись из списка'); // R/NR
+  Writeln('6. Удалить запись из списка'); // R
   Writeln('7. Корректировать запись из списка'); // R/NR
   Writeln('8. Спец-фукнции'); // R
   Writeln('9. Выйти из программы без сохранения изменений'); // R
@@ -2938,7 +2997,39 @@ begin
         Add(FDPT);
       end;
     6:
-      Delete(FDPT);
+      begin
+        Writeln('Выберите желаемую опцию');
+        Writeln('1. Удалить запись талона');
+        Writeln('2. Удалить запись врача');
+        Write('Введите номер опции:');
+        while flag = false do
+        begin
+          try
+            Readln(input2);
+            flag := True;
+          except
+            Writeln('Некорректный ввод!');
+          end;
+        end;
+        flag := false;
+        case input2 of
+          1:
+            begin
+              Delete(FTPT);
+            end;
+          2:
+            begin
+              Delete(FDPT);
+            end;
+        else
+          begin
+            Writeln('Вы ввели некорректное значение, пожалуйста введите значение в диапазоне от 1 до 2!');
+            Readln;
+            Clear;
+            MenuOptionsOutput;
+          end;
+        end;
+      end;
     2:
       begin
         Writeln('Выберите желаемую опцию');
