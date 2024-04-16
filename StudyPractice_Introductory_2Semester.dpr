@@ -109,17 +109,23 @@ begin
   RFlag := false;
   Write('Введите название вашей больницы: ');
   Readln(Inp);
+  while trim(Inp) = '' do
+  begin
+    Writeln('Вы ничего не ввели!');
+    Write('Введите название вашей больницы: ');
+    Readln(Inp);
+  end;
   Inp := AnsiLowerCase(Inp);
   if DirectoryExists(Inp) then
   begin
-    if not FileExists(Inp + '.dat') then
+    if not FileExists(Inp + '/' + Inp + '.dat') then
     begin
       Writeln('Файла с врачами не существует!');
     end
     else
     begin
       Exist := true;
-      AssignFile(FDoctor, Inp + '.dat');
+      AssignFile(FDoctor, Inp + '/' + Inp + '.dat');
       Reset(FDoctor);
       while not EoF(FDoctor) do
       begin
@@ -140,9 +146,11 @@ begin
     end;
     RFlag := false;
     CloseFile(FDoctor);
-    while FileExists(Inp + '_Ticket_№' + IntToStr(Counter) + '.txt') do
+    while FileExists(Inp + '/' + Inp + '_Ticket_№' + IntToStr(Counter) +
+      '.txt') do
     begin
-      AssignFile(FTicket, Inp + '_Ticket_№' + IntToStr(Counter) + '.txt');
+      AssignFile(FTicket, Inp + '/' + Inp + '_Ticket_№' + IntToStr(Counter)
+        + '.txt');
       Reset(FTicket);
       ExistFlag := true;
       if not RFlag then
@@ -362,6 +370,12 @@ begin
   begin
     Write('Введите название вашей больницы: ');
     Readln(Inp);
+    while trim(Inp) = '' do
+    begin
+      Writeln('Вы ничего не ввели!');
+      Write('Введите название вашей больницы: ');
+      Readln(Inp);
+    end;
     Inp := AnsiLowerCase(Inp);
     if DirectoryExists(Inp) then
     begin
@@ -428,6 +442,12 @@ begin
       begin
         Write('Введите название вашей больницы: ');
         Readln(Inp);
+        while trim(Inp) = '' do
+        begin
+          Writeln('Вы ничего не ввели!');
+          Write('Введите название вашей больницы: ');
+          Readln(Inp);
+        end;
         Inp := AnsiLowerCase(Inp);
         if DirectoryExists(Inp) then
         begin
@@ -3079,7 +3099,7 @@ begin
   Writeln('4. Поиск записи'); // R
   Writeln('5. Добавление нового врача'); // R
   Writeln('6. Удалить запись из списка'); // R
-  Writeln('7. Корректировать запись из списка'); // R/NR
+  Writeln('7. Корректировать запись из списка'); // R
   Writeln('8. Спец-фукнции'); // R
   Writeln('9. Выйти из программы без сохранения изменений'); // R
   Writeln('10. Выйти из программы с сохранением изменений'); // R
